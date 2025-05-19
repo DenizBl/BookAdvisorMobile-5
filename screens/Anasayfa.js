@@ -1,14 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import {
-
   View,
   Text,
   StyleSheet,
   ScrollView,
   Image,
   TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  FlatList,
+  Dimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { googleBooksService } from "../services/googleBooksService";
 
 const categories = [
     {
@@ -254,33 +258,122 @@ const categories = [
 
   const Anasayfa = () => {
     const navigation = useNavigation();
-  
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleSearch = async () => {
+      if (!searchQuery.trim()) return;
+      
+      setIsLoading(true);
+      try {
+        const results = await googleBooksService.searchBooks(searchQuery);
+        setSearchResults(results);
+      } catch (error) {
+        console.error("Search error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const renderBookItem = ({ item }) => {
+      const imageUrl = item.volumeInfo.imageLinks?.thumbnail || 'https://via.placeholder.com/150x220.png?text=Kapak+Yok';
+      
+      return (
+        <TouchableOpacity
+          style={styles.bookCard}
+          onPress={() => navigation.navigate("BookDetail", { book: item })}
+        >
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.bookImage}
+            resizeMode="contain"
+          />
+          <View style={styles.bookInfo}>
+            <Text style={styles.bookTitle} numberOfLines={2}>
+              {item.volumeInfo.title}
+            </Text>
+            <Text style={styles.bookAuthor} numberOfLines={1}>
+              {item.volumeInfo.authors?.join(", ") || "Unknown Author"}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      );
+    };
+
+    const renderSearchResults = () => {
+      if (isLoading) {
+        return (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        );
+      }
+
+      if (searchResults.length === 0 && searchQuery) {
+        return (
+          <View style={styles.noResultsContainer}>
+            <Text style={styles.noResultsText}>No books found</Text>
+          </View>
+        );
+      }
+
+      return (
+        <FlatList
+          data={searchResults}
+          renderItem={renderBookItem}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.searchResultsContainer}
+          showsVerticalScrollIndicator={false}
+        />
+      );
+    };
+
     return (
       <ScrollView style={styles.container}>
-        <Text style={styles.pageTitle}>📚 Book Advisor</Text>
-        {categories.map((category) => (
-          <View key={category.id} style={styles.categorySection}>
-            <Text style={styles.categoryTitle}>{category.name}</Text>
-            <View style={styles.bookList}>
-              {category.books.map((book, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.card}
-                  onPress={() => navigation.navigate("BookDetail", { book })}
-                >
-                  <Image
-                    source={{ uri: book.image }}
-                    style={styles.bookImage}
-                  />
-                  <View style={styles.bookInfo}>
-                    <Text style={styles.bookTitle}>{book.title}</Text>
-                    <Text style={styles.bookAuthor}>{book.author}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for books..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+          />
+          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+            <Text style={styles.searchButtonText}>Search</Text>
+          </TouchableOpacity>
+        </View>
+
+        {searchQuery ? (
+          renderSearchResults()
+        ) : (
+          categories.map((category) => (
+            <View key={category.id} style={styles.categorySection}>
+              <Text style={styles.categoryTitle}>{category.name}</Text>
+              <View style={styles.bookList}>
+                {category.books.map((book, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.card}
+                    onPress={() => navigation.navigate("BookDetail", { book })}
+                  >
+                    <Image
+                      source={{ uri: book.image }}
+                      style={styles.bookImage}
+                    />
+                    <View style={styles.bookInfo}>
+                      <Text style={styles.bookTitle}>{book.title}</Text>
+                      <Text style={styles.bookAuthor}>{book.author}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
     );
   };
@@ -345,5 +438,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#7f8c8d",
     marginTop: 4,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    padding: 10,
+    backgroundColor: "#fff",
+    marginBottom: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginRight: 10,
+  },
+  searchButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 15,
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+  searchButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  searchResultsContainer: {
+    padding: 8,
+  },
+  row: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+  },
+  bookCard: {
+    width: (Dimensions.get('window').width - 48) / 2, // 48 = padding (16) * 2 + gap (16)
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noResultsContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 16,
+    color: '#666',
   },
 });
