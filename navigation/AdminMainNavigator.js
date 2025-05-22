@@ -7,8 +7,6 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import AdminBoardScreen from '../screens/AdminBoardScreen';
-import SearchScreen from '../screens/SearchScreen';
-import Notifications from '../screens/NotificationsScreen';
 import AccountScreen from '../screens/AccountScreen';
 import TaskScreen from '../screens/TaskScreen';
 import StaffCardsScreen from '../screens/StaffCardsForAdminScreen';
@@ -64,15 +62,8 @@ const TabNavigator = (props) => {
                },
             }}
          />
-         <Tab.Screen
-            name="Notifications"
-            component={Notifications}
-            options={{
-               tabBarIcon: ({ color, size }) => {
-                  return <Ionicons name="notifications" size={size} color={color} />;
-               },
-            }}
-         />
+         
+    
          <Tab.Screen
             name="Account"
             component={AccountScreen}

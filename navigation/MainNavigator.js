@@ -8,17 +8,18 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 import MyCardScreen from '../screens/MyCardScreen';
-import BoardScreen from '../screens/BoardScreen';
-import SearchScreen from '../screens/SearchScreen';
-import Notifications from '../screens/NotificationsScreen';
+
+import FavoritesScreen from '../screens/FavoritesScreen';
 import AccountScreen from '../screens/AccountScreen';
 import TaskScreen from '../screens/TaskScreen';
-import JoinBoardScreen from '../screens/JoinBoardScreen';
 import Anasayfa from '../screens/Anasayfa';
-import Categories from '../screens/Categories';
+import CategoriesScreen from '../screens/CategoriesScreen';
+import BooksByCategoryScreen from '../screens/BooksByCategoryScreen';
 import BookScreen from '../screens/BookScreen';
 import BookDetail from '../screens/BookDetail';
 import AIBookRecommendationScreen from '../screens/AIBookRecommendationScreen';
+import CurrentlyReadingScreen from '../screens/CurrentlyReadingScreen';
+import ReadBooksScreen from '../screens/ReadBooksScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -56,7 +57,7 @@ const TabNavigator = (props) => {
          />
          <Tab.Screen
             name="Categories"
-            component={Categories}
+            component={CategoriesScreen}
             options={{
                headerShown: false,
                tabBarLabel: 'Categories',
@@ -73,21 +74,22 @@ const TabNavigator = (props) => {
             }}
          />
          <Tab.Screen
-            name="BookSearch"
-            component={JoinBoardScreen}
+            name="CurrentlyReading"
+            component={CurrentlyReadingScreen}
             options={{
                headerShown: false,
+               tabBarLabel: 'Okunuyor',
                tabBarIcon: ({ color, size }) => {
-                  return <FontAwesome5 name="search" size={size} color={color} />;
+                  return <Ionicons name="book-outline" size={size} color={color} />;
                },
             }}
          />
          <Tab.Screen
-            name="Notifications"
-            component={Notifications}
+            name="Favorites"
+            component={FavoritesScreen}
             options={{
                tabBarIcon: ({ color, size }) => {
-                  return <Ionicons name="notifications" size={size} color={color} />;
+                  return <Ionicons name="heart" size={size} color={color} />;
                },
             }}
          />
@@ -114,6 +116,8 @@ const MainNavigator = (props) => {
             component={TabNavigator}
             options={{ headerShown: false }}
          />
+         <Stack.Screen name="Categories" component={CategoriesScreen} options={{ title: 'Kategoriler' }} />
+         <Stack.Screen name="BooksByCategory" component={BooksByCategoryScreen} options={{ title: 'Kitaplar' }} />
          <Stack.Screen
             name="TasksScreen"
             component={TaskScreen}
@@ -140,6 +144,20 @@ const MainNavigator = (props) => {
             component={AIBookRecommendationScreen}
             options={{
                headerTitle: 'Yapay Zeka Kitap Önerisi',
+            }}
+         />
+         <Stack.Screen
+            name="CurrentlyReading"
+            component={CurrentlyReadingScreen}
+            options={{
+               headerTitle: 'Okuduğum Kitaplar',
+            }}
+         />
+         <Stack.Screen
+            name="ReadBooks"
+            component={ReadBooksScreen}
+            options={{
+               headerTitle: 'Okunan Kitaplar',
             }}
          />
          <Stack.Screen

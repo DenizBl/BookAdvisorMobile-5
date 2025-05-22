@@ -64,22 +64,62 @@ export const googleBooksService = {
     }
   },
 
-  getBooksByCategory: async (category, lang = 'tr', maxResults = 20) => {
+  getBooksByCategory: async (category, lang = '', maxResults = 20) => {
     try {
-      const query = `subject:${encodeURIComponent(category)}`;
+      // Build a more flexible query to get better results
+      let query;
+      
+      if (category) {
+        // Try to get more results by using a more flexible query
+        query = `subject:${encodeURIComponent(category)}`;
+      } else {
+        // Fallback to a general query if no category is provided
+        query = 'subject:fiction';
+      }
+      
       const params = new URLSearchParams({
         q: query,
-        langRestrict: lang,
         maxResults,
         key: API_KEY,
-        orderBy: Math.random() > 0.5 ? 'relevance' : 'newest',
+        orderBy: 'relevance',
       });
       
-      const response = await fetch(`${BASE_URL}?${params.toString()}`);
+      // Only add language restriction if specified
+      if (lang) {
+        params.append('langRestrict', lang);
+      }
+      
+      const url = `${BASE_URL}?${params.toString()}`;
+      console.log('Category search URL:', url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
       const data = await response.json();
+      
+      if (!data.items || data.items.length === 0) {
+        console.log(`No results found for category "${category}", trying broader search...`);
+        
+        // Try a broader search if no results
+        const broaderParams = new URLSearchParams({
+          q: category,  // Search for the category as a general term
+          maxResults,
+          key: API_KEY,
+        });
+        
+        const broaderUrl = `${BASE_URL}?${broaderParams.toString()}`;
+        const broaderResponse = await fetch(broaderUrl);
+        const broaderData = await broaderResponse.json();
+        
+        return broaderData.items || [];
+      }
+      
       return data.items || [];
     } catch (error) {
-      console.error(`Error fetching books by category "${category}" with lang "${lang}":`, error);
+      console.error(`Error fetching books by category "${category}":`, error);
       return [];
     }
   },

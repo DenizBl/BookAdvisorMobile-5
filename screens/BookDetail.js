@@ -13,24 +13,369 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { googleBooksService } from '../services/googleBooksService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useSelector } from 'react-redux';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  deleteDoc, 
+  getDoc, 
+  collection, 
+  addDoc, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  increment 
+} from 'firebase/firestore';
+import { auth, db } from '../firebase/config';
 
 const BookDetail = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { book } = route.params;
   const { volumeInfo } = book;
+  
+  // Get user auth state from Redux
+  const userData = useSelector(state => state.auth.userData);
 
+  // Firebase user
+  const user = auth.currentUser;
+  
   const [isLoading, setIsLoading] = useState(false);
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState([]);
   const [success, setSuccess] = useState(false);
+  const [likes, setLikes] = useState(0);
+  const [hasLiked, setHasLiked] = useState(false);
+  const [isCurrentlyReading, setIsCurrentlyReading] = useState(false);
+  const [isFinishedReading, setIsFinishedReading] = useState(false);
+  const [isUpdatingReadingStatus, setIsUpdatingReadingStatus] = useState(false);
+  const [isUpdatingFinishedStatus, setIsUpdatingFinishedStatus] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+
+  useEffect(() => {
+    // Load reading status when component mounts
+    loadReadingStatus();
+    // Set up comments listener
+    setupCommentsListener();
+  }, [book.id, user]);
+
+  const loadReadingStatus = async () => {
+    if (!user) {
+      // Fallback to AsyncStorage for non-authenticated users
+      loadReadingStatusFromAsyncStorage();
+      return;
+    }
+
+    try {
+      // Check if book is in currently reading collection
+      const currentlyReadingRef = doc(db, 'users', user.uid, 'currentlyReading', book.id);
+      const currentlyReadingDoc = await getDoc(currentlyReadingRef);
+      setIsCurrentlyReading(currentlyReadingDoc.exists());
+      
+      // Check if book is in read collection
+      const readRef = doc(db, 'users', user.uid, 'finishedReading', book.id);
+      const readDoc = await getDoc(readRef);
+      setIsFinishedReading(readDoc.exists());
+      
+      // Load likes
+      const likesRef = doc(db, 'bookLikes', book.id);
+      const likesDoc = await getDoc(likesRef);
+      
+      if (likesDoc.exists()) {
+        setLikes(likesDoc.data().count || 0);
+      }
+      
+      // Check if user has liked this book
+      const userLikedRef = doc(db, 'bookLikes', `${book.id}_${user.uid}`);
+      const userLikedDoc = await getDoc(userLikedRef);
+      if (userLikedDoc.exists()) {
+        setHasLiked(userLikedDoc.data().liked);
+      }
+    } catch (error) {
+      console.error('Error loading reading status:', error);
+      // Fallback to AsyncStorage if Firebase query fails
+      loadReadingStatusFromAsyncStorage();
+    }
+  };
+
+  const loadReadingStatusFromAsyncStorage = async () => {
+    try {
+      // Check if book is in currently reading list
+      const currentlyReadingList = await AsyncStorage.getItem('currentlyReadingBooks');
+      if (currentlyReadingList) {
+        const readingBooks = JSON.parse(currentlyReadingList);
+        const isReading = readingBooks.some(item => item.id === book.id);
+        setIsCurrentlyReading(isReading);
+      }
+
+      // Check if book is in finished reading list
+      const readList = await AsyncStorage.getItem('readBooks');
+      if (readList) {
+        const finishedBooks = JSON.parse(readList);
+        const isFinished = finishedBooks.some(item => item.id === book.id);
+        setIsFinishedReading(isFinished);
+      }
+
+      // Load likes
+      const bookLikes = await AsyncStorage.getItem(`book_likes_${book.id}`);
+      if (bookLikes) {
+        setLikes(parseInt(bookLikes));
+      }
+
+      const userLiked = await AsyncStorage.getItem(`user_liked_${book.id}`);
+      if (userLiked === 'true') {
+        setHasLiked(true);
+      }
+    } catch (error) {
+      console.error('Error loading reading status from AsyncStorage:', error);
+    }
+  };
+
+  const setupCommentsListener = () => {
+    const q = query(
+      collection(db, 'bookComments', book.id, 'comments'),
+      orderBy('timestamp', 'desc')
+    );
+    
+    const unsubscribe = onSnapshot(
+      q, 
+      (snapshot) => {
+        setComments(snapshot.docs.map(doc => doc.data()));
+      },
+      (error) => {
+        console.error('Error setting up comments listener:', error);
+      }
+    );
+
+    // Return unsubscribe function to be called when component unmounts
+    return unsubscribe;
+  };
+
+  const handleCurrentlyReading = async () => {
+    if (!user) {
+      Alert.alert(
+        "Giriş Gerekli", 
+        "Bu özelliği kullanmak için giriş yapmanız gerekiyor. Giriş yapmak ister misiniz?",
+        [
+          {
+            text: "Vazgeç",
+            style: "cancel"
+          },
+          {
+            text: "Giriş Yap", 
+            onPress: () => navigation.navigate('Account')
+          }
+        ]
+      );
+      return;
+    }
+
+    if (isUpdatingReadingStatus) return;
+    
+    setIsUpdatingReadingStatus(true);
+    const currentlyReadingRef = doc(db, 'users', user.uid, 'currentlyReading', book.id);
+    
+    try {
+      if (isCurrentlyReading) {
+        // Remove from currently reading
+        await deleteDoc(currentlyReadingRef);
+        setIsCurrentlyReading(false);
+        Alert.alert('Başarılı', 'Kitap "Halen Okunan Kitaplar" listesinden kaldırıldı');
+      } else {
+        // Add to currently reading collection
+        const bookData = {
+          id: book.id,
+          title: volumeInfo.title,
+          authors: volumeInfo.authors || [],
+          thumbnail: volumeInfo.imageLinks?.thumbnail || '',
+          description: volumeInfo.description || '',
+          publisher: volumeInfo.publisher || '',
+          publishedDate: volumeInfo.publishedDate || '',
+          addedAt: new Date(),
+          pageCount: volumeInfo.pageCount || 0,
+          categories: volumeInfo.categories || [],
+          language: volumeInfo.language || ''
+        };
+        
+        await setDoc(currentlyReadingRef, bookData);
+        setIsCurrentlyReading(true);
+        Alert.alert('Başarılı', 'Kitap "Halen Okunan Kitaplar" listesine eklendi');
+      }
+    } catch (error) {
+      console.error('Error updating reading status:', error);
+      Alert.alert('Hata', 'Okuma durumu güncellenirken bir hata oluştu');
+    } finally {
+      setIsUpdatingReadingStatus(false);
+    }
+  };
+
+  const handleFinishedReading = async () => {
+    if (!user) {
+      Alert.alert(
+        "Giriş Gerekli", 
+        "Bu özelliği kullanmak için giriş yapmanız gerekiyor. Giriş yapmak ister misiniz?",
+        [
+          {
+            text: "Vazgeç",
+            style: "cancel"
+          },
+          {
+            text: "Giriş Yap", 
+            onPress: () => navigation.navigate('Account')
+          }
+        ]
+      );
+      return;
+    }
+    
+    if (isUpdatingFinishedStatus) return;
+    
+    setIsUpdatingFinishedStatus(true);
+    const finishedRef = doc(db, 'users', user.uid, 'finishedReading', book.id);
+    const currentlyReadingRef = doc(db, 'users', user.uid, 'currentlyReading', book.id);
+    
+    try {
+      if (isFinishedReading) {
+        // Remove from finished reading
+        await deleteDoc(finishedRef);
+        setIsFinishedReading(false);
+        Alert.alert('Başarılı', 'Kitap "Okunan Kitaplar" listesinden kaldırıldı');
+      } else {
+        // Add to finished reading collection
+        const bookData = {
+          id: book.id,
+          title: volumeInfo.title,
+          authors: volumeInfo.authors || [],
+          thumbnail: volumeInfo.imageLinks?.thumbnail || '',
+          description: volumeInfo.description || '',
+          publisher: volumeInfo.publisher || '',
+          publishedDate: volumeInfo.publishedDate || '',
+          finishedAt: new Date(),
+          pageCount: volumeInfo.pageCount || 0,
+          categories: volumeInfo.categories || [],
+          language: volumeInfo.language || ''
+        };
+        
+        await setDoc(finishedRef, bookData);
+        setIsFinishedReading(true);
+        Alert.alert('Başarılı', 'Kitap "Okunan Kitaplar" listesine eklendi');
+        
+        // If adding to finished reading, remove from currently reading if there
+        if (isCurrentlyReading) {
+          await deleteDoc(currentlyReadingRef);
+          setIsCurrentlyReading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating finished reading status:', error);
+      Alert.alert('Hata', 'Okuma durumu güncellenirken bir hata oluştu');
+    } finally {
+      setIsUpdatingFinishedStatus(false);
+    }
+  };
+
+  const handleLikeBook = async () => {
+    if (!user) {
+      Alert.alert(
+        "Giriş Gerekli", 
+        "Bu özelliği kullanmak için giriş yapmanız gerekiyor. Giriş yapmak ister misiniz?",
+        [
+          {
+            text: "Vazgeç",
+            style: "cancel"
+          },
+          {
+            text: "Giriş Yap", 
+            onPress: () => navigation.navigate('Account')
+          }
+        ]
+      );
+      return;
+    }
+
+    if (isLiking) return;
+    
+    setIsLiking(true);
+    const likesRef = doc(db, 'bookLikes', book.id);
+    const userLikedRef = doc(db, 'bookLikes', `${book.id}_${user.uid}`);
+    
+    try {
+      // First check if the user has already liked
+      const userLikedDoc = await getDoc(userLikedRef);
+      const currentLikeStatus = userLikedDoc.exists() ? userLikedDoc.data().liked : false;
+      
+      // Only proceed if the current status is different from what we want to set
+      if (currentLikeStatus !== !hasLiked) {
+        if (!hasLiked) {
+          // Add like
+          await setDoc(likesRef, { count: increment(1) }, { merge: true });
+          await setDoc(userLikedRef, { liked: true });
+          setLikes(prev => prev + 1);
+          setHasLiked(true);
+        } else {
+          // Remove like
+          await setDoc(likesRef, { count: increment(-1) }, { merge: true });
+          await setDoc(userLikedRef, { liked: false });
+          setLikes(prev => prev - 1);
+          setHasLiked(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating like status:', error);
+      Alert.alert('Hata', 'Beğeni durumu güncellenirken bir hata oluştu');
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const handleCommentSubmit = async () => {
+    if (!comment.trim()) return;
+
+    if (!user) {
+      Alert.alert(
+        "Giriş Gerekli", 
+        "Yorum yapmak için giriş yapmanız gerekiyor. Giriş yapmak ister misiniz?",
+        [
+          {
+            text: "Vazgeç",
+            style: "cancel"
+          },
+          {
+            text: "Giriş Yap", 
+            onPress: () => navigation.navigate('Account')
+          }
+        ]
+      );
+      return;
+    }
+
+    const now = new Date();
+    try {
+      await addDoc(collection(db, 'bookComments', book.id, 'comments'), {
+        name: user.displayName || user.email || 'Anonim',
+        text: comment.trim(),
+        date: now.toLocaleDateString(),
+        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: now,
+      });
+      setComment('');
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      Alert.alert('Hata', 'Yorumunuz gönderilemedi');
+    }
+  };
 
   const handlePreviewLink = async () => {
     if (volumeInfo.previewLink) {
       try {
         await Linking.openURL(volumeInfo.previewLink);
       } catch (error) {
-        Alert.alert('Error', 'Could not open the preview link');
+        Alert.alert('Hata', 'Link açılamadı');
       }
     }
   };
@@ -40,25 +385,9 @@ const BookDetail = () => {
       try {
         await Linking.openURL(volumeInfo.infoLink);
       } catch (error) {
-        Alert.alert('Error', 'Could not open the info link');
+        Alert.alert('Hata', 'Link açılamadı');
       }
     }
-  };
-
-  const handleCommentSubmit = () => {
-    if (!comment.trim()) return;
-
-    const newComment = {
-      text: comment,
-      name: 'User', // Replace with actual user name when authentication is implemented
-      date: new Date().toLocaleDateString('tr-TR'),
-      time: new Date().toLocaleTimeString('tr-TR'),
-    };
-
-    setComments([...comments, newComment]);
-    setComment('');
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
   };
 
   const renderRating = () => {
@@ -105,6 +434,22 @@ const BookDetail = () => {
             </Text>
           )}
 
+          {/* Like Button */}
+          <View style={styles.likeContainer}>
+            <TouchableOpacity 
+              onPress={handleLikeBook} 
+              style={styles.likeButton}
+              disabled={isLiking}
+            >
+              <Ionicons 
+                name={hasLiked ? "heart" : "heart-outline"} 
+                size={24} 
+                color={hasLiked ? "#dc2626" : "#6b7280"} 
+              />
+            </TouchableOpacity>
+            <Text style={styles.likeCount}>{likes} beğeni</Text>
+          </View>
+
           {/* Additional Details */}
           <View style={styles.detailsList}>
             {volumeInfo.publisher && (
@@ -131,6 +476,35 @@ const BookDetail = () => {
                 {volumeInfo.language.toUpperCase()}
               </Text>
             )}
+          </View>
+
+          {/* Reading Buttons */}
+          <View style={styles.readingButtonsContainer}>
+            <TouchableOpacity 
+              onPress={handleCurrentlyReading} 
+              style={[
+                styles.readingButton,
+                isCurrentlyReading ? styles.activeButton : {}
+              ]}
+              disabled={isUpdatingReadingStatus}
+            >
+              <Text style={styles.buttonText}>
+                {isCurrentlyReading ? '📖 Okunuyor' : '📚 Okumaya Başla'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={handleFinishedReading} 
+              style={[
+                styles.readingButton,
+                isFinishedReading ? styles.completedButton : {}
+              ]}
+              disabled={isUpdatingFinishedStatus}
+            >
+              <Text style={styles.buttonText}>
+                {isFinishedReading ? '✅ Okundu' : '📚 Kitabı Tamamlama'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Description */}
@@ -267,6 +641,18 @@ const styles = StyleSheet.create({
     color: '#34495e',
     marginBottom: 16,
   },
+  likeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  likeButton: {
+    marginRight: 8,
+  },
+  likeCount: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
   detailsList: {
     marginBottom: 16,
   },
@@ -278,6 +664,25 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontWeight: '600',
     color: '#2c3e50',
+  },
+  readingButtonsContainer: {
+    flexDirection: 'column',
+    marginBottom: 16,
+    gap: 8,
+  },
+  readingButton: {
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeButton: {
+    backgroundColor: '#dcfce7',
+  },
+  completedButton: {
+    backgroundColor: '#dbeafe',
   },
   descriptionContainer: {
     marginBottom: 16,
