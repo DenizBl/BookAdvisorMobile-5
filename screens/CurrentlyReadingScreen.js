@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
-// import { getFirebaseApp } from '../services/firebaseHelper';
+import { getFirebaseApp } from '../services/firebaseHelper';
 import { getFirestore, collection, onSnapshot, doc, deleteDoc, query } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { auth, db } from '../firebase/config';
+
+// Initialize Firestore and Auth lazily
+let db;
+let auth;
 
 const CurrentlyReadingScreen = () => {
   const [books, setBooks] = useState([]);
@@ -14,14 +18,30 @@ const CurrentlyReadingScreen = () => {
   const userData = useSelector(state => state.auth.userData);
   const isAuthenticated = useSelector(state => !!state.auth.token);
   
-  // Get Firebase user
-  const user = auth.currentUser;
+  // User state
+  const [user, setUser] = useState(null);
+  
+  // Initialize Firebase services
+  useEffect(() => {
+    const app = getFirebaseApp();
+    auth = getAuth(app);
+    db = getFirestore(app);
+    
+    // Setup auth state listener
+    const unsubscribe = auth.onAuthStateChanged(currentUser => {
+      setUser(currentUser);
+    });
+    
+    return unsubscribe;
+  }, []);
 
   // Refresh when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      loadCurrentlyReadingBooks();
-    }, [user?.uid])
+      if (db) {
+        loadCurrentlyReadingBooks();
+      }
+    }, [user?.uid, db])
   );
 
   const loadCurrentlyReadingBooks = async () => {

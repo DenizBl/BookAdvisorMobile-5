@@ -85,8 +85,8 @@ const TabNavigator = (props) => {
             }}
          />
          <Tab.Screen
-            name="Favorites"
-            component={FavoritesScreen}
+            name="ReadBooksScreen"
+            component={ReadBooksScreen}
             options={{
                tabBarIcon: ({ color, size }) => {
                   return <Ionicons name="heart" size={size} color={color} />;

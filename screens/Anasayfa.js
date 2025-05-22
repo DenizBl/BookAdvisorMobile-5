@@ -16,6 +16,7 @@ import { googleBooksService } from "../services/googleBooksService";
 import colors from "../constants/colors";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import BookRecommendationModal from '../components/BookRecommendationModal';
 
 const categories = [
     {
@@ -264,6 +265,7 @@ const categories = [
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [recommendationModalVisible, setRecommendationModalVisible] = useState(false);
 
     const handleSearch = async () => {
       if (!searchQuery.trim()) return;
@@ -339,7 +341,7 @@ const categories = [
         {/* AI Book Recommendation Feature Promotion */}
         <TouchableOpacity 
           style={styles.aiFeatureCard}
-          onPress={() => navigation.navigate('AIRecommendation')}
+          onPress={() => setRecommendationModalVisible(true)}
         >
           <View style={styles.aiFeatureTextContainer}>
             <Text style={styles.aiFeatureTitle}>Kitap Tavsiyesi</Text>
@@ -354,6 +356,12 @@ const categories = [
             <Ionicons name="laptop" size={48} color={colors.white} />
           </View>
         </TouchableOpacity>
+        
+        {/* Book Recommendation Modal */}
+        <BookRecommendationModal 
+          visible={recommendationModalVisible} 
+          onClose={() => setRecommendationModalVisible(false)} 
+        />
         
         <View style={styles.searchContainer}>
           <TextInput

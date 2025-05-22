@@ -16,6 +16,7 @@ import { googleBooksService } from '../services/googleBooksService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSelector } from 'react-redux';
+import { getFirebaseApp } from '../services/firebaseHelper';
 import { 
   getFirestore, 
   doc, 
@@ -29,7 +30,11 @@ import {
   onSnapshot, 
   increment 
 } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { getAuth } from 'firebase/auth';
+
+// Initialize Firestore and Auth
+let db;
+let auth;
 
 const BookDetail = () => {
   const route = useRoute();
@@ -39,9 +44,26 @@ const BookDetail = () => {
   
   // Get user auth state from Redux
   const userData = useSelector(state => state.auth.userData);
-
+  
+  // Get Firebase services lazily
+  useEffect(() => {
+    const app = getFirebaseApp();
+    auth = getAuth(app);
+    db = getFirestore(app);
+  }, []);
+  
   // Firebase user
-  const user = auth.currentUser;
+  const [user, setUser] = useState(null);
+  
+  // Update user state when auth changes
+  useEffect(() => {
+    const app = getFirebaseApp();
+    const auth = getAuth(app);
+    const unsubscribe = auth.onAuthStateChanged(currentUser => {
+      setUser(currentUser);
+    });
+    return unsubscribe;
+  }, []);
   
   const [isLoading, setIsLoading] = useState(false);
   const [comment, setComment] = useState('');
@@ -57,10 +79,13 @@ const BookDetail = () => {
 
   useEffect(() => {
     // Load reading status when component mounts
-    loadReadingStatus();
-    // Set up comments listener
-    setupCommentsListener();
-  }, [book.id, user]);
+    if (db && auth) {
+      loadReadingStatus();
+      // Set up comments listener
+      const unsubscribe = setupCommentsListener();
+      return unsubscribe;
+    }
+  }, [book.id, user, db, auth]);
 
   const loadReadingStatus = async () => {
     if (!user) {
@@ -135,6 +160,8 @@ const BookDetail = () => {
   };
 
   const setupCommentsListener = () => {
+    if (!db) return () => {};
+    
     const q = query(
       collection(db, 'bookComments', book.id, 'comments'),
       orderBy('timestamp', 'desc')
@@ -173,7 +200,7 @@ const BookDetail = () => {
       return;
     }
 
-    if (isUpdatingReadingStatus) return;
+    if (isUpdatingReadingStatus || !db) return;
     
     setIsUpdatingReadingStatus(true);
     const currentlyReadingRef = doc(db, 'users', user.uid, 'currentlyReading', book.id);
@@ -231,7 +258,7 @@ const BookDetail = () => {
       return;
     }
     
-    if (isUpdatingFinishedStatus) return;
+    if (isUpdatingFinishedStatus || !db) return;
     
     setIsUpdatingFinishedStatus(true);
     const finishedRef = doc(db, 'users', user.uid, 'finishedReading', book.id);
@@ -296,7 +323,7 @@ const BookDetail = () => {
       return;
     }
 
-    if (isLiking) return;
+    if (isLiking || !db) return;
     
     setIsLiking(true);
     const likesRef = doc(db, 'bookLikes', book.id);
@@ -351,6 +378,8 @@ const BookDetail = () => {
       );
       return;
     }
+
+    if (!db) return;
 
     const now = new Date();
     try {

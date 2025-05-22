@@ -214,11 +214,6 @@ const AIBookRecommendation = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Kitap Tavsiyesi</Text>
-        <Text style={styles.subtitle}>Şu anki ruh halinize göre özel kitap önerileri alın</Text>
-      </View>
-
       <View style={styles.formContainer}>
         <Text style={styles.label}>Bugün Ne Okuyalım?</Text>
         <TextInput
@@ -317,21 +312,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-  },
-  header: {
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.text,
-    marginTop: 8,
-    textAlign: 'center',
+    paddingTop: 0,
   },
   formContainer: {
     backgroundColor: colors.white,
