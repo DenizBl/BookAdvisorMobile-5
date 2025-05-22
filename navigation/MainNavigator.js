@@ -18,6 +18,7 @@ import Anasayfa from '../screens/Anasayfa';
 import Categories from '../screens/Categories';
 import BookScreen from '../screens/BookScreen';
 import BookDetail from '../screens/BookDetail';
+import AIBookRecommendationScreen from '../screens/AIBookRecommendationScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -39,6 +40,17 @@ const TabNavigator = (props) => {
                headerShown: false,
                tabBarIcon: ({ color, size }) => {
                   return <FontAwesome5 name="book" size={size} color={color} />;
+               },
+            }}
+         />
+         <Tab.Screen
+            name="AIRecommendation"
+            component={AIBookRecommendationScreen}
+            options={{
+               headerShown: false,
+               tabBarLabel: 'Yapay Zeka',
+               tabBarIcon: ({ color, size }) => {
+                  return <FontAwesome5 name="brain" size={size} color={color} />;
                },
             }}
          />
@@ -123,7 +135,13 @@ const MainNavigator = (props) => {
          headerTitle: 'Kitaplar',
    }}
 />
-
+         <Stack.Screen
+            name="AIRecommendation"
+            component={AIBookRecommendationScreen}
+            options={{
+               headerTitle: 'Yapay Zeka Kitap Önerisi',
+            }}
+         />
          <Stack.Screen
             name="MyCard"
             component={MyCardScreen}

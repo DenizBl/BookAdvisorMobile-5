@@ -13,6 +13,9 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { googleBooksService } from "../services/googleBooksService";
+import colors from "../constants/colors";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const categories = [
     {
@@ -333,6 +336,25 @@ const categories = [
 
     return (
       <ScrollView style={styles.container}>
+        {/* AI Book Recommendation Feature Promotion */}
+        <TouchableOpacity 
+          style={styles.aiFeatureCard}
+          onPress={() => navigation.navigate('AIRecommendation')}
+        >
+          <View style={styles.aiFeatureTextContainer}>
+            <Text style={styles.aiFeatureTitle}>Kitap Tavsiyesi</Text>
+            <Text style={styles.aiFeatureSubtitle}>
+              Ruh halinize göre özel kitap önerileri alın!
+            </Text>
+            <View style={styles.aiFeatureButton}>
+              <Text style={styles.aiFeatureButtonText}>Şimdi Dene</Text>
+            </View>
+          </View>
+          <View style={styles.aiFeatureIconContainer}>
+            <Ionicons name="laptop" size={48} color={colors.white} />
+          </View>
+        </TouchableOpacity>
+        
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
@@ -394,6 +416,58 @@ const styles = StyleSheet.create({
     color: "#2c3e50",
     marginBottom: 20,
     textAlign: "center",
+  },
+  aiFeatureCard: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 10,
+    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: colors.white,
+  },
+  aiFeatureTextContainer: {
+    flex: 3,
+  },
+  aiFeatureTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "white",
+    marginBottom: 4,
+  },
+  aiFeatureSubtitle: {
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.9)",
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  aiFeatureButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.5)",
+  },
+  aiFeatureButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  aiFeatureIconContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   categorySection: {
     marginBottom: 30,
