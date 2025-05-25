@@ -8,6 +8,7 @@ import AppNavigator from './navigation/AppNavigator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 import { getFirebaseApp } from './services/firebaseHelper.js';
+import { FavoritesProvider } from './contexts/FavoritesContext';
 
 //AsyncStorage.clear();
 
@@ -20,8 +21,10 @@ export default function App() {
    return (
       <Provider store={store}>
          <SafeAreaProvider>
-            <StatusBar style="auto" />
-            <AppNavigator />
+            <FavoritesProvider>
+               <StatusBar style="auto" />
+               <AppNavigator />
+            </FavoritesProvider>
          </SafeAreaProvider>
       </Provider>
    );

@@ -28,6 +28,7 @@ export default function Header() {
 }
 
 const styles = StyleSheet.create({
+  
   header: {
     height: 60,
     flexDirection: 'row',

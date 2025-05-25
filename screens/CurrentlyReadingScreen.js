@@ -14,6 +14,7 @@ let auth;
 const CurrentlyReadingScreen = () => {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   const navigation = useNavigation();
   const userData = useSelector(state => state.auth.userData);
   const isAuthenticated = useSelector(state => !!state.auth.token);
@@ -30,18 +31,26 @@ const CurrentlyReadingScreen = () => {
     // Setup auth state listener
     const unsubscribe = auth.onAuthStateChanged(currentUser => {
       setUser(currentUser);
+      setAuthLoading(false); // Auth state is now determined
     });
     
     return unsubscribe;
   }, []);
 
+  // Load books when auth state is determined
+  useEffect(() => {
+    if (!authLoading && db) {
+      loadCurrentlyReadingBooks();
+    }
+  }, [authLoading, user, db]);
+
   // Refresh when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      if (db) {
+      if (!authLoading && db) {
         loadCurrentlyReadingBooks();
       }
-    }, [user?.uid, db])
+    }, [user?.uid, db, authLoading])
   );
 
   const loadCurrentlyReadingBooks = async () => {
@@ -197,7 +206,7 @@ const CurrentlyReadingScreen = () => {
     );
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#10b981" />

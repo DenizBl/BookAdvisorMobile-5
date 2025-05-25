@@ -31,6 +31,7 @@ import {
   increment 
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { useFavorites } from '../contexts/FavoritesContext';
 
 // Initialize Firestore and Auth
 let db;
@@ -44,6 +45,10 @@ const BookDetail = () => {
   
   // Get user auth state from Redux
   const userData = useSelector(state => state.auth.userData);
+  const isAuthenticated = useSelector(state => !!state.auth.token);
+  
+  // Favorites context
+  const { isFavorite, toggleFavorite } = useFavorites();
   
   // Get Firebase services lazily
   useEffect(() => {
@@ -463,20 +468,40 @@ const BookDetail = () => {
             </Text>
           )}
 
-          {/* Like Button */}
-          <View style={styles.likeContainer}>
-            <TouchableOpacity 
-              onPress={handleLikeBook} 
-              style={styles.likeButton}
-              disabled={isLiking}
-            >
-              <Ionicons 
-                name={hasLiked ? "heart" : "heart-outline"} 
-                size={24} 
-                color={hasLiked ? "#dc2626" : "#6b7280"} 
-              />
-            </TouchableOpacity>
-            <Text style={styles.likeCount}>{likes} beğeni</Text>
+          {/* Like and Favorites Buttons */}
+          <View style={styles.actionButtonsRow}>
+            <View style={styles.likeContainer}>
+              <TouchableOpacity 
+                onPress={handleLikeBook} 
+                style={styles.likeButton}
+                disabled={isLiking}
+              >
+                <Ionicons 
+                  name={hasLiked ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={hasLiked ? "#dc2626" : "#6b7280"} 
+                />
+              </TouchableOpacity>
+              <Text style={styles.likeCount}>{likes} beğeni</Text>
+            </View>
+
+            {isAuthenticated && (
+              <View style={styles.favoriteContainer}>
+                <TouchableOpacity 
+                  onPress={() => toggleFavorite(book)}
+                  style={styles.favoriteButton}
+                >
+                  <Ionicons 
+                    name={isFavorite(book.id) ? "bookmark" : "bookmark-outline"} 
+                    size={24} 
+                    color={isFavorite(book.id) ? "#8B2635" : "#6b7280"} 
+                  />
+                </TouchableOpacity>
+                <Text style={styles.favoriteText}>
+                  {isFavorite(book.id) ? 'Listemde' : 'Listeme Ekle'}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Additional Details */}
@@ -505,35 +530,6 @@ const BookDetail = () => {
                 {volumeInfo.language.toUpperCase()}
               </Text>
             )}
-          </View>
-
-          {/* Reading Buttons */}
-          <View style={styles.readingButtonsContainer}>
-            <TouchableOpacity 
-              onPress={handleCurrentlyReading} 
-              style={[
-                styles.readingButton,
-                isCurrentlyReading ? styles.activeButton : {}
-              ]}
-              disabled={isUpdatingReadingStatus}
-            >
-              <Text style={styles.buttonText}>
-                {isCurrentlyReading ? '📖 Okunuyor' : '📚 Okumaya Başla'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              onPress={handleFinishedReading} 
-              style={[
-                styles.readingButton,
-                isFinishedReading ? styles.completedButton : {}
-              ]}
-              disabled={isUpdatingFinishedStatus}
-            >
-              <Text style={styles.buttonText}>
-                {isFinishedReading ? '✅ Okundu' : '📚 Kitabı Tamamlama'}
-              </Text>
-            </TouchableOpacity>
           </View>
 
           {/* Description */}
@@ -579,6 +575,39 @@ const BookDetail = () => {
                 <Text style={styles.buttonText}>Daha Fazla Bilgi</Text>
               </TouchableOpacity>
             )}
+            
+            {/* Reading Buttons - Moved here */}
+            <TouchableOpacity 
+              onPress={handleCurrentlyReading} 
+              style={[
+                styles.button,
+                isCurrentlyReading ? styles.activeButton : styles.defaultReadingButton
+              ]}
+              disabled={isUpdatingReadingStatus}
+            >
+              <Text style={[
+                styles.buttonText,
+                isCurrentlyReading ? styles.activeButtonText : {}
+              ]}>
+                {isCurrentlyReading ? '📖 Okunuyor' : '📚 Okumaya Başla'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={handleFinishedReading} 
+              style={[
+                styles.button,
+                isFinishedReading ? styles.completedButton : styles.defaultReadingButton
+              ]}
+              disabled={isUpdatingFinishedStatus}
+            >
+              <Text style={[
+                styles.buttonText,
+                isFinishedReading ? styles.completedButtonText : {}
+              ]}>
+                {isFinishedReading ? '✅ Okundu' : '📚 Kitabı Tamamlama'}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Comment Section */}
@@ -670,15 +699,31 @@ const styles = StyleSheet.create({
     color: '#34495e',
     marginBottom: 16,
   },
-  likeContainer: {
+  actionButtonsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  likeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
   },
   likeButton: {
     marginRight: 8,
   },
   likeCount: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  favoriteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  favoriteButton: {
+    marginRight: 8,
+  },
+  favoriteText: {
     fontSize: 14,
     color: '#6b7280',
   },
@@ -693,25 +738,6 @@ const styles = StyleSheet.create({
   detailLabel: {
     fontWeight: '600',
     color: '#2c3e50',
-  },
-  readingButtonsContainer: {
-    flexDirection: 'column',
-    marginBottom: 16,
-    gap: 8,
-  },
-  readingButton: {
-    backgroundColor: '#f5f5f5',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeButton: {
-    backgroundColor: '#dcfce7',
-  },
-  completedButton: {
-    backgroundColor: '#dbeafe',
   },
   descriptionContainer: {
     marginBottom: 16,
@@ -764,14 +790,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 24,
   },
   button: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    flex: 1,
+    minWidth: '45%',
+  },
+  defaultReadingButton: {
+    backgroundColor: '#9ca3af', // Medium gray for default reading buttons
+  },
+  activeButton: {
+    backgroundColor: '#4b5563', // Darker gray for currently reading
+  },
+  completedButton: {
+    backgroundColor: '#e8d5d8', // Light burgundy for completed
   },
   previewButton: {
     backgroundColor: '#dc2626',
@@ -784,12 +821,22 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: '#ffffff', // White text for gray backgrounds
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  activeButtonText: {
+    color: '#ffffff', // White text for active button
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  completedButtonText: {
+    color: '#6b1d28', // Darker burgundy for completed text
     fontWeight: '600',
     fontSize: 14,
   },
   commentSection: {
-    marginTop: 16,
+    marginTop: 48,
   },
   commentInput: {
     borderWidth: 1,

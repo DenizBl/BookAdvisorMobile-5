@@ -22,7 +22,7 @@ const authSlice = createSlice({
       logout: (state, action) => {
          state.token = null;
          state.userData = null;
-         state.didTryAutoLogin = false;
+         state.didTryAutoLogin = true;
       },
       updateLoggedInUserData: (state, action) => {
          state.userData = { ...state.userData, ...action.payload.newData };
