@@ -22,12 +22,11 @@ const CategoriesScreen = () => {
 
   // Book-related GIFs (local assets)
   const bookGifs = [
-    require('../assets/bookGif/tumblr_mqzl7eksIn1qzpxx1o1_500.gif'),
-    require('../assets/bookGif/pride-and-prejudice-keira-knightley.gif'),
-    require('../assets/bookGif/booklover13.gif'),
     require('../assets/bookGif/reading-book.gif'),
     require('../assets/bookGif/6e38fbf26233906084c728a5680119c8.gif'),
     require('../assets/bookGif/sleep-dog-wear-eyeglasses-reading-book-clqv4u56biv21ys8.gif'),
+    require('../assets/bookGif/pride-and-prejudice-keira-knightley.gif'),
+    require('../assets/bookGif/booklover13.gif'),
     require('../assets/bookGif/153f1ca5-7e27-4c94-be8a-562982b5f444_480x370.gif'),
     require('../assets/bookGif/reading-read.gif'),
     require('../assets/bookGif/655989980sherlock-holmes-reading-book-animated-gif.gif')
