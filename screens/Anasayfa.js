@@ -44,20 +44,49 @@ const Anasayfa = () => {
    const [userLikedBooks, setUserLikedBooks] = useState({});
    const [bookComments, setBookComments] = useState({});
 
+   // Array of vibrant colors for category cards (kategori sayfasından alınan renkler)
+   const cardColors = [
+      '#9147ff', // Purple (Kurgu kategorisi için)
+      '#b068e9', // Light Purple
+      '#1e3a8a', // Navy
+      '#b91c1c', // Red
+      '#4f46e5', // Blue
+      '#ec4899', // Pink
+      '#7e22ce', // Deep Purple
+      '#0ea5e9', // Light Blue
+      '#7c3aed', // Violet
+      '#059669', // Teal
+      '#d946ef', // Magenta
+      '#f59e0b', // Amber
+   ];
+
    useEffect(() => {
-      const app = getFirebaseApp();
-      auth = getAuth(app);
-      db = getFirestore(app);
-      
-      // Setup auth state listener
-      const unsubscribe = auth.onAuthStateChanged(currentUser => {
-         setUser(currentUser);
-      });
-      
-      loadCategoryBooks();
-      testGoogleBooksAPI();
-      
-      return unsubscribe;
+      try {
+         const app = getFirebaseApp();
+         if (app) {
+            auth = getAuth(app);
+            db = getFirestore(app);
+            
+            // Setup auth state listener
+            const unsubscribe = auth.onAuthStateChanged(currentUser => {
+               setUser(currentUser);
+            });
+            
+            loadCategoryBooks();
+            testGoogleBooksAPI();
+            
+            return unsubscribe;
+         } else {
+            console.log('Firebase app not available, continuing without Firebase features');
+            loadCategoryBooks();
+            testGoogleBooksAPI();
+         }
+      } catch (error) {
+         console.error('Error initializing Firebase:', error);
+         // Continue loading books even if Firebase fails
+         loadCategoryBooks();
+         testGoogleBooksAPI();
+      }
    }, []);
 
    // Clear search results when search query is cleared
@@ -69,10 +98,10 @@ const Anasayfa = () => {
 
    // Load likes for search results
    useEffect(() => {
-      if (searchResults.length > 0 && user && db) {
+      if (searchResults.length > 0 && db) {
          loadLikesForBooks(searchResults);
       }
-   }, [searchResults, user]);
+   }, [searchResults, user, db]);
 
    // Load likes and comments for category books
    useEffect(() => {
@@ -83,7 +112,7 @@ const Anasayfa = () => {
             loadCommentsForBooks(allBooks);
          }
       }
-   }, [categoryBooks, user]);
+   }, [categoryBooks, user, db]);
 
    const testGoogleBooksAPI = async () => {
       try {
@@ -100,7 +129,7 @@ const Anasayfa = () => {
       setLoadingCategories(true);
       try {
          const booksByCategory = {};
-         for (const category of categoriesData.slice(0, 6)) {
+         for (const category of categoriesData.slice(0, 7)) {
             const response = await fetch(
                `https://www.googleapis.com/books/v1/volumes?q=subject:${encodeURIComponent(
                   category.name
@@ -119,22 +148,39 @@ const Anasayfa = () => {
    };
 
    const loadLikesForBooks = async (books) => {
-      if (!db || !user) return;
+      if (!db) {
+         console.log('Firebase not initialized, skipping likes loading');
+         return;
+      }
       
       try {
          const likesData = {};
          const userLikesData = {};
          
          for (const book of books) {
-            // Load book likes count
-            const likesRef = doc(db, 'bookLikes', book.id);
-            const likesDoc = await getDoc(likesRef);
-            likesData[book.id] = likesDoc.exists() ? likesDoc.data().count || 0 : 0;
+            // Load book likes count (this works without user auth)
+            try {
+               const likesRef = doc(db, 'bookLikes', book.id);
+               const likesDoc = await getDoc(likesRef);
+               likesData[book.id] = likesDoc.exists() ? likesDoc.data().count || 0 : 0;
+            } catch (error) {
+               console.log(`Error loading likes for book ${book.id}:`, error);
+               likesData[book.id] = 0;
+            }
             
-            // Load user's like status
-            const userLikedRef = doc(db, 'bookLikes', `${book.id}_${user.uid}`);
-            const userLikedDoc = await getDoc(userLikedRef);
-            userLikesData[book.id] = userLikedDoc.exists() ? userLikedDoc.data().liked : false;
+            // Load user's like status (only if user is authenticated)
+            if (user && user.uid) {
+               try {
+                  const userLikedRef = doc(db, 'bookLikes', `${book.id}_${user.uid}`);
+                  const userLikedDoc = await getDoc(userLikedRef);
+                  userLikesData[book.id] = userLikedDoc.exists() ? userLikedDoc.data().liked : false;
+               } catch (error) {
+                  console.log(`Error loading user likes for book ${book.id}:`, error);
+                  userLikesData[book.id] = false;
+               }
+            } else {
+               userLikesData[book.id] = false;
+            }
          }
          
          setBookLikes(likesData);
@@ -145,7 +191,10 @@ const Anasayfa = () => {
    };
 
    const loadCommentsForBooks = async (books) => {
-      if (!db) return;
+      if (!db) {
+         console.log('Firebase not initialized, skipping comments loading');
+         return;
+      }
       
       try {
          const commentsData = {};
@@ -158,7 +207,7 @@ const Anasayfa = () => {
                const querySnapshot = await getDocs(q);
                commentsData[book.id] = querySnapshot.size;
             } catch (error) {
-               console.error('Error fetching comment count for book:', book.id, error);
+               console.log('Error fetching comment count for book:', book.id, error);
                commentsData[book.id] = 0;
             }
          }
@@ -166,6 +215,12 @@ const Anasayfa = () => {
          setBookComments(commentsData);
       } catch (error) {
          console.error('Error loading comments:', error);
+         // Set default values to prevent UI issues
+         const defaultCommentsData = {};
+         books.forEach(book => {
+            defaultCommentsData[book.id] = 0;
+         });
+         setBookComments(defaultCommentsData);
       }
    };
 
@@ -275,17 +330,20 @@ const Anasayfa = () => {
       }
    };
 
-   const renderBookItem = ({ item }) => {
+   const renderBookItem = ({ item, index, categoryColor }) => {
       const imageUrl =
          item.volumeInfo.imageLinks?.thumbnail ||
          'https://via.placeholder.com/150x220.png?text=Kapak+Yok';
 
       const likeCount = bookLikes[item.id] || 0;
       const commentCount = bookComments[item.id] || 0;
+      
+      // Kategori rengi verilmişse onu kullan, yoksa index'e göre renk belirle
+      const cardColor = categoryColor || cardColors[index % cardColors.length];
 
       return (
          <TouchableOpacity
-            style={styles.bookCard}
+            style={[styles.bookCard, { backgroundColor: cardColor }]}
             onPress={() => navigation.navigate('BookDetail', { book: item })}
          >
             <View style={styles.bookImageContainer}>
@@ -296,7 +354,7 @@ const Anasayfa = () => {
                />
                {isAuthenticated && (
                   <TouchableOpacity
-                     style={styles.favoriteButton}
+                     style={[styles.favoriteButton, { backgroundColor: 'rgba(255, 255, 255, 0.9)' }]}
                      onPress={() => toggleFavorite(item)}
                   >
                      <Ionicons
@@ -309,23 +367,23 @@ const Anasayfa = () => {
             </View>
             <View style={styles.bookInfo}>
                <View style={styles.bookTextInfo}>
-                  <Text style={styles.bookTitle} numberOfLines={2}>
+                  <Text style={[styles.bookTitle, { color: 'white' }]} numberOfLines={2}>
                      {item.volumeInfo.title}
                   </Text>
-                  <Text style={styles.bookAuthor} numberOfLines={1}>
+                  <Text style={[styles.bookAuthor, { color: 'rgba(255, 255, 255, 0.8)' }]} numberOfLines={1}>
                      {item.volumeInfo.authors?.join(', ') || 'Bilinmeyen Yazar'}
                   </Text>
                </View>
                
                {/* Like and Comment Counts */}
-               <View style={styles.bookStats}>
+               <View style={[styles.bookStats, { borderTopColor: 'rgba(255, 255, 255, 0.3)' }]}>
                   <View style={styles.statItem}>
-                     <Ionicons name="heart" size={12} color="#e74c3c" />
-                     <Text style={styles.statText}>{likeCount}</Text>
+                     <Ionicons name="heart" size={12} color="white" />
+                     <Text style={[styles.statText, { color: 'white' }]}>{likeCount}</Text>
                   </View>
                   <View style={styles.statItem}>
-                     <Ionicons name="chatbubble" size={12} color="#718096" />
-                     <Text style={styles.statText}>{commentCount}</Text>
+                     <Ionicons name="chatbubble" size={12} color="white" />
+                     <Text style={[styles.statText, { color: 'white' }]}>{commentCount}</Text>
                   </View>
                </View>
             </View>
@@ -434,8 +492,10 @@ const Anasayfa = () => {
       );
    };
 
-   const renderCategorySection = (category) => {
+   const renderCategorySection = (category, categoryIndex) => {
       const books = categoryBooks[category.name] || [];
+      // Her kategori için sabit bir renk belirle
+      const categoryColor = cardColors[categoryIndex % cardColors.length];
 
       return (
          <View style={styles.categorySection} key={category.name}>
@@ -457,7 +517,7 @@ const Anasayfa = () => {
             ) : (
                <FlatList
                   data={books}
-                  renderItem={renderBookItem}
+                  renderItem={({ item, index }) => renderBookItem({ item, index, categoryColor })}
                   keyExtractor={(item) => item.id}
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -527,7 +587,7 @@ const Anasayfa = () => {
             </View>
          ) : (
             <View style={styles.categoriesContainer}>
-               {categoriesData.slice(0, 6).map(renderCategorySection)}
+               {categoriesData.slice(0, 7).map((category, index) => renderCategorySection(category, index))}
             </View>
          )}
       </ScrollView>

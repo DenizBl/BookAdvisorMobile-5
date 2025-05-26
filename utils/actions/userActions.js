@@ -19,14 +19,31 @@ import { collection, getDocs, getFirestore, query, where } from 'firebase/firest
 
 export const getUserData = async (userId) => {
    try {
+      console.log('getUserData çağrıldı, userId:', userId);
       const app = getFirebaseApp();
-      const dbRef = ref(getDatabase(app));
+      if (!app) {
+         console.error('Firebase app not available');
+         return null;
+      }
+      
+      const database = getDatabase(app);
+      const dbRef = ref(database);
       const userRef = child(dbRef, `users/${userId}`);
 
+      console.log('Realtime Database\'den kullanıcı verisi alınıyor...');
       const snapshot = await get(userRef);
-      return snapshot.val();
+      
+      if (snapshot.exists()) {
+         const userData = snapshot.val();
+         console.log('Kullanıcı verisi bulundu:', userData);
+         return userData;
+      } else {
+         console.log('Kullanıcı verisi bulunamadı');
+         return null;
+      }
    } catch (error) {
-      console.log(error);
+      console.error('getUserData hatası:', error);
+      return null;
    }
 };
 

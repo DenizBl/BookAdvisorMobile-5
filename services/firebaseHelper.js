@@ -16,9 +16,19 @@ import { app } from '../firebase/config';
 // } from '@env';
 
 export const getFirebaseApp = () => {
-   console.log('Returning existing Firebase app instance');
-   // Using the existing Firebase app instance from config.js
-   return app;
+   try {
+      console.log('Returning existing Firebase app instance');
+      // Using the existing Firebase app instance from config.js
+      if (app) {
+         return app;
+      } else {
+         console.error('Firebase app is not initialized');
+         return null;
+      }
+   } catch (error) {
+      console.error('Error getting Firebase app:', error);
+      return null;
+   }
 };
 
 // Original implementation commented out to avoid duplicate initialization
