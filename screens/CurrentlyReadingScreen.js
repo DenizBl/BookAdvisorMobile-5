@@ -21,6 +21,55 @@ const CurrentlyReadingScreen = () => {
   
   // User state
   const [user, setUser] = useState(null);
+
+  // Renk paleti (anasayfadaki ile aynı)
+  const categoryColors = [
+    '#9147ff', // Purple
+    '#b068e9', // Light Purple
+    '#1e3a8a', // Navy
+    '#b91c1c', // Red
+    '#4f46e5', // Blue
+    '#ec4899', // Pink
+    '#7e22ce', // Deep Purple
+    '#0ea5e9', // Light Blue
+    '#7c3aed', // Violet
+    '#059669', // Teal
+    '#d946ef', // Magenta
+    '#f59e0b', // Amber
+  ];
+
+  // Kitap ID'sine ve index'ine göre ardışık aynı renkler olmayacak şekilde renk belirleme
+  const getRandomColor = (bookId, index, previousColor) => {
+    // Kitap ID'sinin hash'ini hesapla
+    let hash = 0;
+    for (let i = 0; i < bookId.length; i++) {
+      hash = bookId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Index'i de hash'e ekle daha fazla çeşitlilik için
+    hash += index * 37; // 37 asal sayı, daha iyi dağılım için
+    
+    // Hash'i pozitif yap
+    hash = Math.abs(hash);
+    
+    // İlk rengi belirle
+    let colorIndex = hash % categoryColors.length;
+    let selectedColor = categoryColors[colorIndex];
+    
+    // Eğer önceki renkle aynı ise, farklı bir renk bul
+    if (previousColor && selectedColor === previousColor) {
+      // Farklı bir renk bulana kadar dene (maksimum 3 deneme)
+      for (let attempt = 1; attempt < 4; attempt++) {
+        colorIndex = (hash + attempt) % categoryColors.length;
+        selectedColor = categoryColors[colorIndex];
+        if (selectedColor !== previousColor) {
+          break;
+        }
+      }
+    }
+    
+    return selectedColor;
+  };
   
   // Initialize Firebase services
   useEffect(() => {
@@ -143,16 +192,22 @@ const CurrentlyReadingScreen = () => {
     });
   };
 
-  const renderBookItem = ({ item }) => {
+  const renderBookItem = ({ item, index }) => {
     const coverUrl = item.thumbnail || 'https://via.placeholder.com/150x220.png?text=No+Cover';
     const authors = item.authors ? (Array.isArray(item.authors) ? item.authors.join(', ') : item.authors) : 'Bilinmeyen Yazar';
     const addedDate = item.addedAt ? new Date(item.addedAt).toLocaleDateString('tr-TR') : (
       item.addedDate ? new Date(item.addedDate).toLocaleDateString('tr-TR') : 'Bilinmeyen Tarih'
     );
 
+    // Önceki kitabın rengini al (ardışık aynı renk olmaması için)
+    const previousColor = index > 0 ? getRandomColor(books[index - 1].id, index - 1) : null;
+    
+    // Kitap ID'sine ve index'ine göre rastgele renk al
+    const cardColor = getRandomColor(item.id, index, previousColor);
+
     return (
       <TouchableOpacity 
-        style={styles.bookItem}
+        style={[styles.bookItem, { backgroundColor: cardColor }]}
         onPress={() => handleBookPress(item)}
       >
         <Image 
@@ -217,7 +272,7 @@ const CurrentlyReadingScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.pageTitle}>Okuduğum Kitaplar</Text>
+      <Text style={styles.pageTitle}></Text>
       <FlatList
         data={books}
         keyExtractor={item => item.id}
@@ -252,7 +307,6 @@ const styles = StyleSheet.create({
   },
   bookItem: {
     flexDirection: 'row',
-    backgroundColor: '#f5f6fa',
     borderRadius: 12,
     marginBottom: 16,
     padding: 12,
@@ -276,12 +330,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2c3e50',
+    color: '#ffffff',
     marginBottom: 4,
   },
   author: {
     fontSize: 14,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 8,
   },
   readingStatus: {
@@ -291,23 +345,25 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#10b981',
+    color: '#ffffff',
     marginBottom: 4,
   },
   dateText: {
     fontSize: 12,
-    color: '#64748b',
+    color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 8,
   },
   removeButton: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   removeButtonText: {
-    color: '#dc2626',
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '500',
   },

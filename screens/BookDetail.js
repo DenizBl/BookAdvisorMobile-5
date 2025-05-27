@@ -32,6 +32,7 @@ import {
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useFavorites } from '../contexts/FavoritesContext';
+import colors from '../constants/colors';
 
 // Initialize Firestore and Auth
 let db;
@@ -802,26 +803,27 @@ const styles = StyleSheet.create({
     minWidth: '45%',
   },
   defaultReadingButton: {
-    backgroundColor: '#9ca3af', // Medium gray for default reading buttons
+    backgroundColor: '#1e3a8a' 
   },
-  activeButton: {
-    backgroundColor: '#4b5563', // Darker gray for currently reading
-  },
-  completedButton: {
-    backgroundColor: '#e8d5d8', // Light burgundy for completed
-  },
+      activeButton: {
+      backgroundColor: colors.primary, // Primary burgundy for currently reading
+    },
+      completedButton: {
+     backgroundColor: colors.primary, // Primary burgundy for completed
+    },
   previewButton: {
-    backgroundColor: '#dc2626',
+    backgroundColor: '#b91c1c', // Deep red for preview
   },
   infoButton: {
-    backgroundColor: '#3b82f6',
+
+    backgroundColor: '#b91c1c', 
   },
   commentButton: {
-    backgroundColor: '#dc2626',
+    backgroundColor: colors.primary,
     marginTop: 8,
   },
   buttonText: {
-    color: '#ffffff', // White text for gray backgrounds
+    color: '#ffffff', // White text for all buttons
     fontWeight: '600',
     fontSize: 14,
   },
@@ -831,7 +833,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   completedButtonText: {
-    color: '#6b1d28', // Darker burgundy for completed text
+    color: '#ffffff', // White text for completed button
     fontWeight: '600',
     fontSize: 14,
   },

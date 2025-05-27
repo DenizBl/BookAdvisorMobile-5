@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 
 import colors from '../constants/colors';
@@ -30,6 +30,46 @@ import { userLogout } from '../utils/actions/authActions';
 const Drawer = createDrawerNavigator();
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Animasyonlu Icon Komponenti
+const AnimatedTabIcon = ({ IconComponent, iconName, size, focused, style, solid }) => {
+   const bounceValue = React.useRef(new Animated.Value(0)).current;
+
+   React.useEffect(() => {
+      if (focused) {
+         Animated.spring(bounceValue, {
+            toValue: -8,
+            friction: 3,
+            tension: 40,
+            useNativeDriver: true,
+         }).start();
+      } else {
+         Animated.spring(bounceValue, {
+            toValue: 0,
+            friction: 3,
+            tension: 40,
+            useNativeDriver: true,
+         }).start();
+      }
+   }, [focused, bounceValue]);
+
+   return (
+      <Animated.View 
+         style={[
+            focused ? styles.activeIconContainer : styles.iconContainer,
+            { transform: [{ translateY: bounceValue }] }
+         ]}
+      >
+         <IconComponent 
+            name={iconName} 
+            size={size} 
+            color="#fff" 
+            solid={solid}
+            style={[focused ? styles.activeIcon : null, style]}
+         />
+      </Animated.View>
+   );
+};
 
 // Tab Navigator - Ana tab bar
 const MainTabNavigator = ({ navigation }) => {
@@ -59,15 +99,15 @@ const MainTabNavigator = ({ navigation }) => {
                </TouchableOpacity>
             ),
             tabBarStyle: {
-               backgroundColor: '#fff',
+               backgroundColor: colors.primary,
                borderTopWidth: 1,
-               borderTopColor: '#e9ecef',
+               borderTopColor: colors.primary,
                height: 60,
                paddingBottom: 5,
                paddingTop: 5,
             },
-            tabBarActiveTintColor: colors.primary,
-            tabBarInactiveTintColor: '#8e8e93',
+            tabBarActiveTintColor: '#fff',
+            tabBarInactiveTintColor: '#fff',
          }}
       >
          <Tab.Screen
@@ -77,10 +117,11 @@ const MainTabNavigator = ({ navigation }) => {
                title: 'Ana Sayfa',
                tabBarLabel: 'Ana Sayfa',
                tabBarIcon: ({ color, size, focused }) => (
-                  <FontAwesome5 
-                     name="book" 
-                     size={size} 
-                     color={focused ? colors.primary : '#8e8e93'} 
+                  <AnimatedTabIcon
+                     IconComponent={FontAwesome5}
+                     iconName="book"
+                     size={size}
+                     focused={focused}
                   />
                ),
             }}
@@ -92,10 +133,11 @@ const MainTabNavigator = ({ navigation }) => {
                title: 'Kategoriler',
                tabBarLabel: 'Kategoriler',
                tabBarIcon: ({ color, size, focused }) => (
-                  <MaterialCommunityIcons 
-                     name="menu" 
-                     size={size} 
-                     color={focused ? colors.primary : '#8e8e93'} 
+                  <AnimatedTabIcon
+                     IconComponent={MaterialCommunityIcons}
+                     iconName="menu"
+                     size={size}
+                     focused={focused}
                   />
                ),
             }}
@@ -107,10 +149,11 @@ const MainTabNavigator = ({ navigation }) => {
                title: 'Şu Anda Okuduklarım',
                tabBarLabel: 'Okunuyor',
                tabBarIcon: ({ color, size, focused }) => (
-                  <Ionicons 
-                     name="book-outline" 
-                     size={size} 
-                     color={focused ? colors.primary : '#8e8e93'} 
+                  <AnimatedTabIcon
+                     IconComponent={Ionicons}
+                     iconName="book"
+                     size={size}
+                     focused={focused}
                   />
                ),
             }}
@@ -122,10 +165,12 @@ const MainTabNavigator = ({ navigation }) => {
                title: 'Okuduklarım',
                tabBarLabel: 'Okundu',
                tabBarIcon: ({ color, size, focused }) => (
-                  <Ionicons 
-                     name="book" 
-                     size={size} 
-                     color={focused ? colors.primary : '#8e8e93'} 
+                  <AnimatedTabIcon
+                     IconComponent={FontAwesome5}
+                     iconName="check-square"
+                     size={size}
+                     focused={focused}
+                     solid={true}
                   />
                ),
             }}
@@ -137,10 +182,11 @@ const MainTabNavigator = ({ navigation }) => {
                title: 'Listem',
                tabBarLabel: 'Listem',
                tabBarIcon: ({ color, size, focused }) => (
-                  <Ionicons 
-                     name="bookmark" 
-                     size={size} 
-                     color={focused ? colors.primary : '#8e8e93'} 
+                  <AnimatedTabIcon
+                     IconComponent={Ionicons}
+                     iconName="bookmark"
+                     size={size}
+                     focused={focused}
                   />
                ),
             }}
@@ -620,6 +666,35 @@ const styles = StyleSheet.create({
       backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
+   },
+   iconContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      opacity: 0.7,
+   },
+   activeIconContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#fff',
+      shadowOffset: {
+         width: 0,
+         height: 0,
+      },
+      shadowOpacity: 1,
+      shadowRadius: 10,
+      elevation: 10,
+   },
+   activeIcon: {
+      shadowColor: '#fff',
+      shadowOffset: {
+         width: 0,
+         height: 0,
+      },
+      shadowOpacity: 0.8,
+      shadowRadius: 8,
+      textShadowColor: '#fff',
+      textShadowOffset: { width: 0, height: 0 },
+      textShadowRadius: 15,
    },
 });
 

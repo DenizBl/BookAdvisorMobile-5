@@ -60,6 +60,39 @@ const Anasayfa = () => {
       '#f59e0b', // Amber
    ];
 
+   // Kitap ID'sine ve index'ine göre ardışık aynı renkler olmayacak şekilde renk belirleme
+   const getRandomColor = (bookId, index, previousColor) => {
+      // Kitap ID'sinin hash'ini hesapla
+      let hash = 0;
+      for (let i = 0; i < bookId.length; i++) {
+         hash = bookId.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      
+      // Index'i de hash'e ekle daha fazla çeşitlilik için
+      hash += index * 37; // 37 asal sayı, daha iyi dağılım için
+      
+      // Hash'i pozitif yap
+      hash = Math.abs(hash);
+      
+      // İlk rengi belirle
+      let colorIndex = hash % cardColors.length;
+      let selectedColor = cardColors[colorIndex];
+      
+      // Eğer önceki renkle aynı ise, farklı bir renk bul
+      if (previousColor && selectedColor === previousColor) {
+         // Farklı bir renk bulana kadar dene (maksimum 3 deneme)
+         for (let attempt = 1; attempt < 4; attempt++) {
+            colorIndex = (hash + attempt) % cardColors.length;
+            selectedColor = cardColors[colorIndex];
+            if (selectedColor !== previousColor) {
+               break;
+            }
+         }
+      }
+      
+      return selectedColor;
+   };
+
    useEffect(() => {
       try {
          const app = getFirebaseApp();
@@ -391,7 +424,7 @@ const Anasayfa = () => {
       );
    };
 
-   const renderSearchBookItem = ({ item }) => {
+   const renderSearchBookItem = ({ item, index }) => {
       const imageUrl =
          item.volumeInfo.imageLinks?.thumbnail ||
          'https://via.placeholder.com/150x220.png?text=Kapak+Yok';
@@ -399,9 +432,15 @@ const Anasayfa = () => {
       const isLiked = userLikedBooks[item.id] || false;
       const likeCount = bookLikes[item.id] || 0;
 
+      // Önceki kitabın rengini al (ardışık aynı renk olmaması için)
+      const previousColor = index > 0 ? getRandomColor(searchResults[index - 1].id, index - 1) : null;
+      
+      // Kitap ID'sine ve index'ine göre rastgele renk al
+      const cardColor = getRandomColor(item.id, index, previousColor);
+
       return (
          <TouchableOpacity
-            style={styles.searchBookCard}
+            style={[styles.searchBookCard, { backgroundColor: cardColor }]}
             onPress={() => navigation.navigate('BookDetail', { book: item })}
          >
             <View style={styles.searchBookImageContainer}>
@@ -475,9 +514,9 @@ const Anasayfa = () => {
                      onPress={() => handleLikeBook(item)}
                   >
                      <Ionicons
-                        name={isLiked ? "heart" : "heart-outline"}
+                        name={isLiked ? "bookmark" : "bookmark-outline"}
                         size={16}
-                        color={isLiked ? "#ffffff" : colors.primary}
+                        color="#ffffff"
                      />
                      <Text style={[
                         styles.favoriteActionButtonText,
@@ -773,7 +812,6 @@ const styles = StyleSheet.create({
    searchBookCard: {
       width: '100%',
       marginBottom: 16,
-      backgroundColor: 'white',
       borderRadius: 12,
       padding: 12,
       elevation: 3,
@@ -808,19 +846,19 @@ const styles = StyleSheet.create({
    searchBookTitle: {
       fontSize: 16,
       fontWeight: '600',
-      color: '#1a202c',
+      color: '#ffffff',
       marginBottom: 6,
       lineHeight: 20,
    },
    searchBookAuthor: {
       fontSize: 14,
-      color: '#4a5568',
+      color: 'rgba(255, 255, 255, 0.8)',
       marginBottom: 4,
       fontWeight: '500',
    },
    searchBookYear: {
       fontSize: 12,
-      color: '#718096',
+      color: 'rgba(255, 255, 255, 0.7)',
       marginRight: 8,
    },
    ratingContainer: {
@@ -829,7 +867,7 @@ const styles = StyleSheet.create({
    },
    ratingText: {
       fontSize: 12,
-      color: '#4a5568',
+      color: 'rgba(255, 255, 255, 0.8)',
       marginLeft: 3,
       fontWeight: '500',
    },
@@ -840,7 +878,7 @@ const styles = StyleSheet.create({
    },
    searchBookDescription: {
       fontSize: 13,
-      color: '#718096',
+      color: 'rgba(255, 255, 255, 0.7)',
       lineHeight: 18,
       marginBottom: 8,
    },
@@ -859,9 +897,9 @@ const styles = StyleSheet.create({
    favoriteActionButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'transparent',
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
       borderWidth: 1,
-      borderColor: colors.primary,
+      borderColor: 'rgba(255, 255, 255, 0.3)',
       paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: 20,
@@ -869,17 +907,17 @@ const styles = StyleSheet.create({
       alignSelf: 'flex-start',
    },
    favoriteActionButtonActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
+      backgroundColor: 'rgba(255, 255, 255, 0.3)',
+      borderColor: 'rgba(255, 255, 255, 0.5)',
    },
    favoriteActionButtonText: {
-      color: colors.primary,
+      color: '#ffffff',
       fontSize: 12,
       fontWeight: '600',
       marginLeft: 6,
    },
    favoriteActionButtonTextActive: {
-      color: 'white',
+      color: '#ffffff',
    },
    likesDisplay: {
       flexDirection: 'row',
@@ -888,7 +926,7 @@ const styles = StyleSheet.create({
    },
    likesDisplayText: {
       fontSize: 12,
-      color: '#718096',
+      color: 'rgba(255, 255, 255, 0.7)',
       marginLeft: 4,
    },
    bookStats: {

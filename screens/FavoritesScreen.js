@@ -23,6 +23,55 @@ const FavoritesScreen = () => {
    const [showRemoveModal, setShowRemoveModal] = useState(false);
    const [selectedBook, setSelectedBook] = useState(null);
 
+   // Renk paleti (diğer ekranlarla aynı)
+   const categoryColors = [
+      '#9147ff', // Purple
+      '#b068e9', // Light Purple
+      '#1e3a8a', // Navy
+      '#b91c1c', // Red
+      '#4f46e5', // Blue
+      '#ec4899', // Pink
+      '#7e22ce', // Deep Purple
+      '#0ea5e9', // Light Blue
+      '#7c3aed', // Violet
+      '#059669', // Teal
+      '#d946ef', // Magenta
+      '#f59e0b', // Amber
+   ];
+
+   // Kitap ID'sine ve index'ine göre ardışık aynı renkler olmayacak şekilde renk belirleme
+   const getRandomColor = (bookId, index, previousColor) => {
+      // Kitap ID'sinin hash'ini hesapla
+      let hash = 0;
+      for (let i = 0; i < bookId.length; i++) {
+         hash = bookId.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      
+      // Index'i de hash'e ekle daha fazla çeşitlilik için
+      hash += index * 37; // 37 asal sayı, daha iyi dağılım için
+      
+      // Hash'i pozitif yap
+      hash = Math.abs(hash);
+      
+      // İlk rengi belirle
+      let colorIndex = hash % categoryColors.length;
+      let selectedColor = categoryColors[colorIndex];
+      
+      // Eğer önceki renkle aynı ise, farklı bir renk bul
+      if (previousColor && selectedColor === previousColor) {
+         // Farklı bir renk bulana kadar dene (maksimum 3 deneme)
+         for (let attempt = 1; attempt < 4; attempt++) {
+            colorIndex = (hash + attempt) % categoryColors.length;
+            selectedColor = categoryColors[colorIndex];
+            if (selectedColor !== previousColor) {
+               break;
+            }
+         }
+      }
+      
+      return selectedColor;
+   };
+
    const handleRemoveFavorite = (book) => {
       setSelectedBook(book);
       setShowRemoveModal(true);
@@ -44,7 +93,7 @@ const FavoritesScreen = () => {
       setSelectedBook(null);
    };
 
-   const renderFavoriteItem = ({ item }) => {
+   const renderFavoriteItem = ({ item, index }) => {
       const imageUrl = item.thumbnail || 'https://via.placeholder.com/150x220.png?text=Kapak+Yok';
 
       // Use the complete book data if available, otherwise fallback to reconstructed object
@@ -59,8 +108,14 @@ const FavoritesScreen = () => {
          }
       };
 
+      // Önceki kitabın rengini al (ardışık aynı renk olmaması için)
+      const previousColor = index > 0 ? getRandomColor(favorites[index - 1].id, index - 1) : null;
+      
+      // Kitap ID'sine ve index'ine göre rastgele renk al
+      const cardColor = getRandomColor(item.id, index, previousColor);
+
       return (
-         <View style={styles.bookCard}>
+         <View style={[styles.bookCard, { backgroundColor: cardColor }]}>
             <TouchableOpacity
                style={styles.bookContent}
                onPress={() => navigation.navigate('BookDetail', { 
@@ -86,25 +141,25 @@ const FavoritesScreen = () => {
             </TouchableOpacity>
             
             <View style={styles.buttonContainer}>
-               <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveFavorite(item)}
-               >
-                  <Ionicons name="trash-outline" size={16} color="#e74c3c" />
-                  <Text style={styles.removeButtonText}>Listemden Kaldır</Text>
-               </TouchableOpacity>
-               
-               <TouchableOpacity
-                  style={styles.commentButton}
-                  onPress={() => navigation.navigate('BookDetail', { 
-                     book: bookForNavigation
-                  })}
-               >
-                  <Ionicons name="chatbubble-outline" size={16} color="#718096" />
-                  <Text style={styles.commentButtonText}>
-                     {commentCounts[item.id] || 0} Yorum
-                  </Text>
-               </TouchableOpacity>
+                           <TouchableOpacity
+               style={styles.removeButton}
+               onPress={() => handleRemoveFavorite(item)}
+            >
+               <Ionicons name="trash-outline" size={16} color="#ffffff" />
+               <Text style={styles.removeButtonText}>Listemden Kaldır</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+               style={styles.commentButton}
+               onPress={() => navigation.navigate('BookDetail', { 
+                  book: bookForNavigation
+               })}
+            >
+               <Ionicons name="chatbubble-outline" size={16} color="rgba(255, 255, 255, 0.9)" />
+               <Text style={styles.commentButtonText}>
+                  {commentCounts[item.id] || 0} Yorum
+               </Text>
+            </TouchableOpacity>
             </View>
          </View>
       );
@@ -228,7 +283,6 @@ const styles = StyleSheet.create({
       padding: 20,
    },
    bookCard: {
-      backgroundColor: 'white',
       borderRadius: 12,
       marginBottom: 16,
       elevation: 2,
@@ -254,23 +308,23 @@ const styles = StyleSheet.create({
    bookTitle: {
       fontSize: 16,
       fontWeight: 'bold',
-      color: '#2d3748',
+      color: '#ffffff',
       marginBottom: 4,
    },
    bookAuthor: {
       fontSize: 14,
-      color: '#718096',
+      color: 'rgba(255, 255, 255, 0.8)',
       marginBottom: 8,
    },
    bookDescription: {
       fontSize: 12,
-      color: '#a0aec0',
+      color: 'rgba(255, 255, 255, 0.7)',
       lineHeight: 18,
    },
    buttonContainer: {
       flexDirection: 'row',
       borderTopWidth: 1,
-      borderTopColor: '#e2e8f0',
+      borderTopColor: 'rgba(255, 255, 255, 0.3)',
    },
    removeButton: {
       flex: 1,
@@ -278,13 +332,13 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: 12,
-      backgroundColor: '#fef2f2',
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
       borderBottomLeftRadius: 12,
    },
    removeButtonText: {
       marginLeft: 6,
       fontSize: 12,
-      color: '#e74c3c',
+      color: '#ffffff',
       fontWeight: '500',
    },
    commentButton: {
@@ -293,13 +347,13 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: 12,
-      backgroundColor: '#f7fafc',
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
       borderBottomRightRadius: 12,
    },
    commentButtonText: {
       marginLeft: 6,
       fontSize: 12,
-      color: '#718096',
+      color: 'rgba(255, 255, 255, 0.9)',
       fontWeight: '500',
    },
    emptyContainer: {
