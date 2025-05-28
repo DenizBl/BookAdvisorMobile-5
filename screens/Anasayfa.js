@@ -17,12 +17,22 @@ import { googleBooksService } from '../services/googleBooksService';
 import colors from '../constants/colors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import LottieView from 'lottie-react-native';
 import BookRecommendationModal from '../components/BookRecommendationModal';
 import { categoriesData } from '../components/categoriesData';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { useSelector } from 'react-redux';
 import { getFirebaseApp } from '../services/firebaseHelper';
-import { getFirestore, doc, setDoc, getDoc, increment, collection, query, getDocs } from 'firebase/firestore';
+import {
+   getFirestore,
+   doc,
+   setDoc,
+   getDoc,
+   increment,
+   collection,
+   query,
+   getDocs,
+} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 // Initialize Firestore and Auth
@@ -32,7 +42,7 @@ let auth;
 const Anasayfa = () => {
    const navigation = useNavigation();
    const { isFavorite, toggleFavorite } = useFavorites();
-   const isAuthenticated = useSelector(state => !!state.auth.token);
+   const isAuthenticated = useSelector((state) => !!state.auth.token);
    const [searchQuery, setSearchQuery] = useState('');
    const [searchResults, setSearchResults] = useState([]);
    const [isLoading, setIsLoading] = useState(false);
@@ -67,17 +77,17 @@ const Anasayfa = () => {
       for (let i = 0; i < bookId.length; i++) {
          hash = bookId.charCodeAt(i) + ((hash << 5) - hash);
       }
-      
+
       // Index'i de hash'e ekle daha fazla çeşitlilik için
       hash += index * 37; // 37 asal sayı, daha iyi dağılım için
-      
+
       // Hash'i pozitif yap
       hash = Math.abs(hash);
-      
+
       // İlk rengi belirle
       let colorIndex = hash % cardColors.length;
       let selectedColor = cardColors[colorIndex];
-      
+
       // Eğer önceki renkle aynı ise, farklı bir renk bul
       if (previousColor && selectedColor === previousColor) {
          // Farklı bir renk bulana kadar dene (maksimum 3 deneme)
@@ -89,7 +99,7 @@ const Anasayfa = () => {
             }
          }
       }
-      
+
       return selectedColor;
    };
 
@@ -99,18 +109,20 @@ const Anasayfa = () => {
          if (app) {
             auth = getAuth(app);
             db = getFirestore(app);
-            
+
             // Setup auth state listener
-            const unsubscribe = auth.onAuthStateChanged(currentUser => {
+            const unsubscribe = auth.onAuthStateChanged((currentUser) => {
                setUser(currentUser);
             });
-            
+
             loadCategoryBooks();
             testGoogleBooksAPI();
-            
+
             return unsubscribe;
          } else {
-            console.log('Firebase app not available, continuing without Firebase features');
+            console.log(
+               'Firebase app not available, continuing without Firebase features'
+            );
             loadCategoryBooks();
             testGoogleBooksAPI();
          }
@@ -185,11 +197,11 @@ const Anasayfa = () => {
          console.log('Firebase not initialized, skipping likes loading');
          return;
       }
-      
+
       try {
          const likesData = {};
          const userLikesData = {};
-         
+
          for (const book of books) {
             // Load book likes count (this works without user auth)
             try {
@@ -200,13 +212,15 @@ const Anasayfa = () => {
                console.log(`Error loading likes for book ${book.id}:`, error);
                likesData[book.id] = 0;
             }
-            
+
             // Load user's like status (only if user is authenticated)
             if (user && user.uid) {
                try {
                   const userLikedRef = doc(db, 'bookLikes', `${book.id}_${user.uid}`);
                   const userLikedDoc = await getDoc(userLikedRef);
-                  userLikesData[book.id] = userLikedDoc.exists() ? userLikedDoc.data().liked : false;
+                  userLikesData[book.id] = userLikedDoc.exists()
+                     ? userLikedDoc.data().liked
+                     : false;
                } catch (error) {
                   console.log(`Error loading user likes for book ${book.id}:`, error);
                   userLikesData[book.id] = false;
@@ -215,7 +229,7 @@ const Anasayfa = () => {
                userLikesData[book.id] = false;
             }
          }
-         
+
          setBookLikes(likesData);
          setUserLikedBooks(userLikesData);
       } catch (error) {
@@ -228,10 +242,10 @@ const Anasayfa = () => {
          console.log('Firebase not initialized, skipping comments loading');
          return;
       }
-      
+
       try {
          const commentsData = {};
-         
+
          for (const book of books) {
             try {
                // Load book comments count from subcollection
@@ -244,13 +258,13 @@ const Anasayfa = () => {
                commentsData[book.id] = 0;
             }
          }
-         
+
          setBookComments(commentsData);
       } catch (error) {
          console.error('Error loading comments:', error);
          // Set default values to prevent UI issues
          const defaultCommentsData = {};
-         books.forEach(book => {
+         books.forEach((book) => {
             defaultCommentsData[book.id] = 0;
          });
          setBookComments(defaultCommentsData);
@@ -260,62 +274,62 @@ const Anasayfa = () => {
    const handleLikeBook = async (book) => {
       if (!user) {
          Alert.alert(
-            "Giriş Gerekli", 
-            "Bu özelliği kullanmak için giriş yapmanız gerekiyor. Giriş yapmak ister misiniz?",
+            'Giriş Gerekli',
+            'Bu özelliği kullanmak için giriş yapmanız gerekiyor. Giriş yapmak ister misiniz?',
             [
                {
-                  text: "Vazgeç",
-                  style: "cancel"
+                  text: 'Vazgeç',
+                  style: 'cancel',
                },
                {
-                  text: "Giriş Yap", 
-                  onPress: () => navigation.navigate('Account')
-               }
+                  text: 'Giriş Yap',
+                  onPress: () => navigation.navigate('Account'),
+               },
             ]
          );
          return;
       }
 
       if (!db) return;
-      
+
       try {
          const likesRef = doc(db, 'bookLikes', book.id);
          const userLikedRef = doc(db, 'bookLikes', `${book.id}_${user.uid}`);
-         
+
          const currentLikeStatus = userLikedBooks[book.id] || false;
-         
+
          if (!currentLikeStatus) {
             // Add like
             await setDoc(likesRef, { count: increment(1) }, { merge: true });
             await setDoc(userLikedRef, { liked: true });
-            
+
             // Update local state
-            setBookLikes(prev => ({
+            setBookLikes((prev) => ({
                ...prev,
-               [book.id]: (prev[book.id] || 0) + 1
+               [book.id]: (prev[book.id] || 0) + 1,
             }));
-            setUserLikedBooks(prev => ({
+            setUserLikedBooks((prev) => ({
                ...prev,
-               [book.id]: true
+               [book.id]: true,
             }));
-            
+
             // Also add to favorites
             toggleFavorite(book);
          } else {
             // Remove like
             await setDoc(likesRef, { count: increment(-1) }, { merge: true });
             await setDoc(userLikedRef, { liked: false });
-            
+
             // Update local state
-            setBookLikes(prev => ({
+            setBookLikes((prev) => ({
                ...prev,
-               [book.id]: Math.max((prev[book.id] || 0) - 1, 0)
+               [book.id]: Math.max((prev[book.id] || 0) - 1, 0),
             }));
-            setUserLikedBooks(prev => ({
+            setUserLikedBooks((prev) => ({
                ...prev,
-               [book.id]: false
+               [book.id]: false,
             }));
-            
+
             // Also remove from favorites
             toggleFavorite(book);
          }
@@ -370,7 +384,7 @@ const Anasayfa = () => {
 
       const likeCount = bookLikes[item.id] || 0;
       const commentCount = bookComments[item.id] || 0;
-      
+
       // Kategori rengi verilmişse onu kullan, yoksa index'e göre renk belirle
       const cardColor = categoryColor || cardColors[index % cardColors.length];
 
@@ -387,13 +401,16 @@ const Anasayfa = () => {
                />
                {isAuthenticated && (
                   <TouchableOpacity
-                     style={[styles.favoriteButton, { backgroundColor: 'rgba(255, 255, 255, 0.9)' }]}
+                     style={[
+                        styles.favoriteButton,
+                        { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                     ]}
                      onPress={() => toggleFavorite(item)}
                   >
                      <Ionicons
-                        name={isFavorite(item.id) ? "heart" : "heart-outline"}
+                        name={isFavorite(item.id) ? 'heart' : 'heart-outline'}
                         size={20}
-                        color={isFavorite(item.id) ? "#e74c3c" : "#718096"}
+                        color={isFavorite(item.id) ? '#e74c3c' : '#718096'}
                      />
                   </TouchableOpacity>
                )}
@@ -403,20 +420,32 @@ const Anasayfa = () => {
                   <Text style={[styles.bookTitle, { color: 'white' }]} numberOfLines={2}>
                      {item.volumeInfo.title}
                   </Text>
-                  <Text style={[styles.bookAuthor, { color: 'rgba(255, 255, 255, 0.8)' }]} numberOfLines={1}>
+                  <Text
+                     style={[styles.bookAuthor, { color: 'rgba(255, 255, 255, 0.8)' }]}
+                     numberOfLines={1}
+                  >
                      {item.volumeInfo.authors?.join(', ') || 'Bilinmeyen Yazar'}
                   </Text>
                </View>
-               
+
                {/* Like and Comment Counts */}
-               <View style={[styles.bookStats, { borderTopColor: 'rgba(255, 255, 255, 0.3)' }]}>
+               <View
+                  style={[
+                     styles.bookStats,
+                     { borderTopColor: 'rgba(255, 255, 255, 0.3)' },
+                  ]}
+               >
                   <View style={styles.statItem}>
                      <Ionicons name="heart" size={12} color="white" />
-                     <Text style={[styles.statText, { color: 'white' }]}>{likeCount}</Text>
+                     <Text style={[styles.statText, { color: 'white' }]}>
+                        {likeCount}
+                     </Text>
                   </View>
                   <View style={styles.statItem}>
                      <Ionicons name="chatbubble" size={12} color="white" />
-                     <Text style={[styles.statText, { color: 'white' }]}>{commentCount}</Text>
+                     <Text style={[styles.statText, { color: 'white' }]}>
+                        {commentCount}
+                     </Text>
                   </View>
                </View>
             </View>
@@ -433,8 +462,9 @@ const Anasayfa = () => {
       const likeCount = bookLikes[item.id] || 0;
 
       // Önceki kitabın rengini al (ardışık aynı renk olmaması için)
-      const previousColor = index > 0 ? getRandomColor(searchResults[index - 1].id, index - 1) : null;
-      
+      const previousColor =
+         index > 0 ? getRandomColor(searchResults[index - 1].id, index - 1) : null;
+
       // Kitap ID'sine ve index'ine göre rastgele renk al
       const cardColor = getRandomColor(item.id, index, previousColor);
 
@@ -455,9 +485,9 @@ const Anasayfa = () => {
                      onPress={() => handleLikeBook(item)}
                   >
                      <Ionicons
-                        name={isLiked ? "heart" : "heart-outline"}
+                        name={isLiked ? 'heart' : 'heart-outline'}
                         size={20}
-                        color={isLiked ? "#e74c3c" : "#ffffff"}
+                        color={isLiked ? '#e74c3c' : '#ffffff'}
                      />
                   </TouchableOpacity>
                )}
@@ -500,29 +530,29 @@ const Anasayfa = () => {
                {likeCount > 0 && (
                   <View style={styles.likesDisplay}>
                      <Ionicons name="heart" size={14} color="#e74c3c" />
-                     <Text style={styles.likesDisplayText}>
-                        {likeCount} beğeni
-                     </Text>
+                     <Text style={styles.likesDisplayText}>{likeCount} beğeni</Text>
                   </View>
                )}
                {isAuthenticated && (
                   <TouchableOpacity
                      style={[
                         styles.favoriteActionButton,
-                        isLiked && styles.favoriteActionButtonActive
+                        isLiked && styles.favoriteActionButtonActive,
                      ]}
                      onPress={() => handleLikeBook(item)}
                   >
                      <Ionicons
-                        name={isLiked ? "bookmark" : "bookmark-outline"}
+                        name={isLiked ? 'bookmark' : 'bookmark-outline'}
                         size={16}
                         color="#ffffff"
                      />
-                     <Text style={[
-                        styles.favoriteActionButtonText,
-                        isLiked && styles.favoriteActionButtonTextActive
-                     ]}>
-                        {isLiked ? "Listemde" : "Listeme Ekle"}
+                     <Text
+                        style={[
+                           styles.favoriteActionButtonText,
+                           isLiked && styles.favoriteActionButtonTextActive,
+                        ]}
+                     >
+                        {isLiked ? 'Listemde' : 'Listeme Ekle'}
                      </Text>
                   </TouchableOpacity>
                )}
@@ -556,7 +586,9 @@ const Anasayfa = () => {
             ) : (
                <FlatList
                   data={books}
-                  renderItem={({ item, index }) => renderBookItem({ item, index, categoryColor })}
+                  renderItem={({ item, index }) =>
+                     renderBookItem({ item, index, categoryColor })
+                  }
                   keyExtractor={(item) => item.id}
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -568,68 +600,96 @@ const Anasayfa = () => {
    };
 
    return (
-      <ScrollView style={styles.container}>
-         {/* AI Book Recommendation Feature Promotion */}
+      <View style={styles.container}>
+         <ScrollView style={styles.scrollView}>
+            {/* AI Book Recommendation Feature Promotion */}
+            <TouchableOpacity
+               style={styles.aiFeatureCard}
+               onPress={() => setRecommendationModalVisible(true)}
+            >
+               <View style={styles.aiFeatureTextContainer}>
+                  <Text style={styles.aiFeatureTitle}>Kitap Tavsiyesi</Text>
+                  <Text style={styles.aiFeatureSubtitle}>
+                     Ruh halinize göre özel kitap önerileri alın!
+                  </Text>
+                  <View style={styles.aiFeatureButton}>
+                     <Text style={styles.aiFeatureButtonText}>Şimdi Dene</Text>
+                  </View>
+               </View>
+               <View style={styles.aiFeatureIconContainer}>
+                  <LottieView
+                     source={{
+                        uri: 'https://assets9.lottiefiles.com/packages/lf20_1pxqjqps.json',
+                     }}
+                     autoPlay
+                     loop
+                     style={styles.aiFeatureAnimation}
+                     resizeMode="contain"
+                  />
+               </View>
+            </TouchableOpacity>
+
+            {/* Book Recommendation Modal */}
+            <BookRecommendationModal
+               visible={recommendationModalVisible}
+               onClose={() => setRecommendationModalVisible(false)}
+            />
+
+            <View style={styles.searchContainer}>
+               <TextInput
+                  style={styles.searchInput}
+                  placeholder="Kitap ara..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onSubmitEditing={handleSearch}
+                  returnKeyType="search"
+               />
+               <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+                  <Text style={styles.searchButtonText}>Ara</Text>
+               </TouchableOpacity>
+            </View>
+
+            {isLoading ? (
+               <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+               </View>
+            ) : searchResults.length > 0 ? (
+               <View style={styles.searchResultsContainer}>
+                  <Text style={styles.searchResultsTitle}>Arama Sonuçları</Text>
+                  <FlatList
+                     data={searchResults}
+                     renderItem={renderSearchBookItem}
+                     keyExtractor={(item) => item.id}
+                     numColumns={1}
+                     contentContainerStyle={styles.searchResultsList}
+                     showsVerticalScrollIndicator={false}
+                  />
+               </View>
+            ) : (
+               <View style={styles.categoriesContainer}>
+                  {categoriesData
+                     .slice(0, 7)
+                     .map((category, index) => renderCategorySection(category, index))}
+               </View>
+            )}
+         </ScrollView>
+
+         {/* Floating Action Button for AI Book Recommendation */}
          <TouchableOpacity
-            style={styles.aiFeatureCard}
+            style={styles.fab}
             onPress={() => setRecommendationModalVisible(true)}
          >
-            <View style={styles.aiFeatureTextContainer}>
-               <Text style={styles.aiFeatureTitle}>Kitap Tavsiyesi</Text>
-               <Text style={styles.aiFeatureSubtitle}>
-                  Ruh halinize göre özel kitap önerileri alın!
-               </Text>
-               <View style={styles.aiFeatureButton}>
-                  <Text style={styles.aiFeatureButtonText}>Şimdi Dene</Text>
-               </View>
-            </View>
-            <View style={styles.aiFeatureIconContainer}>
-               <FontAwesome5 name="robot" size={48} color={colors.white} />
-            </View>
-         </TouchableOpacity>
-
-         {/* Book Recommendation Modal */}
-         <BookRecommendationModal
-            visible={recommendationModalVisible}
-            onClose={() => setRecommendationModalVisible(false)}
-         />
-
-         <View style={styles.searchContainer}>
-            <TextInput
-               style={styles.searchInput}
-               placeholder="Kitap ara..."
-               value={searchQuery}
-               onChangeText={setSearchQuery}
-               onSubmitEditing={handleSearch}
-               returnKeyType="search"
+            <LottieView
+               source={{
+                  uri: 'https://assets9.lottiefiles.com/packages/lf20_1pxqjqps.json',
+               }}
+               autoPlay
+               loop
+               style={styles.fabAnimation}
+               resizeMode="contain"
             />
-            <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-               <Text style={styles.searchButtonText}>Ara</Text>
-            </TouchableOpacity>
-         </View>
-
-         {isLoading ? (
-            <View style={styles.loadingContainer}>
-               <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-         ) : searchResults.length > 0 ? (
-            <View style={styles.searchResultsContainer}>
-               <Text style={styles.searchResultsTitle}>Arama Sonuçları</Text>
-               <FlatList
-                  data={searchResults}
-                  renderItem={renderSearchBookItem}
-                  keyExtractor={(item) => item.id}
-                  numColumns={1}
-                  contentContainerStyle={styles.searchResultsList}
-                  showsVerticalScrollIndicator={false}
-               />
-            </View>
-         ) : (
-            <View style={styles.categoriesContainer}>
-               {categoriesData.slice(0, 7).map((category, index) => renderCategorySection(category, index))}
-            </View>
-         )}
-      </ScrollView>
+         </TouchableOpacity>
+      </View>
    );
 };
 
@@ -639,6 +699,9 @@ const styles = StyleSheet.create({
       backgroundColor: '#f5f6fa',
       paddingHorizontal: 16,
       paddingTop: 20,
+   },
+   scrollView: {
+      flex: 1,
    },
    aiFeatureCard: {
       backgroundColor: colors.primary,
@@ -946,6 +1009,33 @@ const styles = StyleSheet.create({
       fontSize: 12,
       color: '#718096',
       marginLeft: 2,
+   },
+   fab: {
+      position: 'absolute',
+      right: 20,
+      bottom: 30, // Daha aşağıda
+      width: 110,
+      height: 110,
+      borderRadius: 55,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 8,
+      shadowColor: '#000',
+      shadowOffset: {
+         width: 0,
+         height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 4.65,
+      overflow: 'visible', // Balon taşarsa da gözüksün
+   },
+   fabAnimation: {
+      width: 110,
+      height: 110,
+   },
+   aiFeatureAnimation: {
+      width: 100,
+      height: 100,
    },
 });
 

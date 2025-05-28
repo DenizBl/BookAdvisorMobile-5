@@ -15,13 +15,16 @@ import { useFavorites } from '../contexts/FavoritesContext';
 import { useSelector } from 'react-redux';
 import colors from '../constants/colors';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import LottieView from 'lottie-react-native';
+import BookRecommendationModal from '../components/BookRecommendationModal';
 
 const FavoritesScreen = () => {
    const navigation = useNavigation();
    const { favorites, loading, commentCounts, removeFromFavorites } = useFavorites();
-   const isAuthenticated = useSelector(state => !!state.auth.token);
+   const isAuthenticated = useSelector((state) => !!state.auth.token);
    const [showRemoveModal, setShowRemoveModal] = useState(false);
    const [selectedBook, setSelectedBook] = useState(null);
+   const [recommendationModalVisible, setRecommendationModalVisible] = useState(false);
 
    // Renk paleti (diğer ekranlarla aynı)
    const categoryColors = [
@@ -46,17 +49,17 @@ const FavoritesScreen = () => {
       for (let i = 0; i < bookId.length; i++) {
          hash = bookId.charCodeAt(i) + ((hash << 5) - hash);
       }
-      
+
       // Index'i de hash'e ekle daha fazla çeşitlilik için
       hash += index * 37; // 37 asal sayı, daha iyi dağılım için
-      
+
       // Hash'i pozitif yap
       hash = Math.abs(hash);
-      
+
       // İlk rengi belirle
       let colorIndex = hash % categoryColors.length;
       let selectedColor = categoryColors[colorIndex];
-      
+
       // Eğer önceki renkle aynı ise, farklı bir renk bul
       if (previousColor && selectedColor === previousColor) {
          // Farklı bir renk bulana kadar dene (maksimum 3 deneme)
@@ -68,7 +71,7 @@ const FavoritesScreen = () => {
             }
          }
       }
-      
+
       return selectedColor;
    };
 
@@ -84,7 +87,10 @@ const FavoritesScreen = () => {
          setSelectedBook(null);
       } catch (error) {
          setShowRemoveModal(false);
-         Alert.alert('Hata', 'Kitap listenizden kaldırılırken bir sorun oluştu. Lütfen tekrar deneyin.');
+         Alert.alert(
+            'Hata',
+            'Kitap listenizden kaldırılırken bir sorun oluştu. Lütfen tekrar deneyin.'
+         );
       }
    };
 
@@ -94,7 +100,8 @@ const FavoritesScreen = () => {
    };
 
    const renderFavoriteItem = ({ item, index }) => {
-      const imageUrl = item.thumbnail || 'https://via.placeholder.com/150x220.png?text=Kapak+Yok';
+      const imageUrl =
+         item.thumbnail || 'https://via.placeholder.com/150x220.png?text=Kapak+Yok';
 
       // Use the complete book data if available, otherwise fallback to reconstructed object
       const bookForNavigation = item.completeBookData || {
@@ -105,12 +112,13 @@ const FavoritesScreen = () => {
             description: item.description,
             imageLinks: { thumbnail: item.thumbnail },
             publishedDate: item.publishedDate,
-         }
+         },
       };
 
       // Önceki kitabın rengini al (ardışık aynı renk olmaması için)
-      const previousColor = index > 0 ? getRandomColor(favorites[index - 1].id, index - 1) : null;
-      
+      const previousColor =
+         index > 0 ? getRandomColor(favorites[index - 1].id, index - 1) : null;
+
       // Kitap ID'sine ve index'ine göre rastgele renk al
       const cardColor = getRandomColor(item.id, index, previousColor);
 
@@ -118,9 +126,11 @@ const FavoritesScreen = () => {
          <View style={[styles.bookCard, { backgroundColor: cardColor }]}>
             <TouchableOpacity
                style={styles.bookContent}
-               onPress={() => navigation.navigate('BookDetail', { 
-                  book: bookForNavigation
-               })}
+               onPress={() =>
+                  navigation.navigate('BookDetail', {
+                     book: bookForNavigation,
+                  })
+               }
             >
                <Image
                   source={{ uri: imageUrl }}
@@ -139,27 +149,33 @@ const FavoritesScreen = () => {
                   </Text>
                </View>
             </TouchableOpacity>
-            
+
             <View style={styles.buttonContainer}>
-                           <TouchableOpacity
-               style={styles.removeButton}
-               onPress={() => handleRemoveFavorite(item)}
-            >
-               <Ionicons name="trash-outline" size={16} color="#ffffff" />
-               <Text style={styles.removeButtonText}>Listemden Kaldır</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-               style={styles.commentButton}
-               onPress={() => navigation.navigate('BookDetail', { 
-                  book: bookForNavigation
-               })}
-            >
-               <Ionicons name="chatbubble-outline" size={16} color="rgba(255, 255, 255, 0.9)" />
-               <Text style={styles.commentButtonText}>
-                  {commentCounts[item.id] || 0} Yorum
-               </Text>
-            </TouchableOpacity>
+               <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => handleRemoveFavorite(item)}
+               >
+                  <Ionicons name="trash-outline" size={16} color="#ffffff" />
+                  <Text style={styles.removeButtonText}>Listemden Kaldır</Text>
+               </TouchableOpacity>
+
+               <TouchableOpacity
+                  style={styles.commentButton}
+                  onPress={() =>
+                     navigation.navigate('BookDetail', {
+                        book: bookForNavigation,
+                     })
+                  }
+               >
+                  <Ionicons
+                     name="chatbubble-outline"
+                     size={16}
+                     color="rgba(255, 255, 255, 0.9)"
+                  />
+                  <Text style={styles.commentButtonText}>
+                     {commentCounts[item.id] || 0} Yorum
+                  </Text>
+               </TouchableOpacity>
             </View>
          </View>
       );
@@ -172,10 +188,9 @@ const FavoritesScreen = () => {
             {!isAuthenticated ? 'Giriş yapmanız gerekiyor' : 'Listeniz henüz boş'}
          </Text>
          <Text style={styles.emptySubtitle}>
-            {!isAuthenticated 
+            {!isAuthenticated
                ? 'Listenizi görmek için lütfen giriş yapın'
-               : 'Beğendiğiniz kitapları listenize ekleyerek burada görüntüleyebilirsiniz'
-            }
+               : 'Beğendiğiniz kitapları listenize ekleyerek burada görüntüleyebilirsiniz'}
          </Text>
          <TouchableOpacity
             style={styles.exploreButton}
@@ -219,29 +234,34 @@ const FavoritesScreen = () => {
                <View style={styles.modalContainer}>
                   <View style={styles.modalHeader}>
                      <View style={styles.modalIconContainer}>
-                        <Ionicons name="bookmark-outline" size={32} color={colors.primary} />
+                        <Ionicons
+                           name="bookmark-outline"
+                           size={32}
+                           color={colors.primary}
+                        />
                      </View>
                      <Text style={styles.modalTitle}>Listeden Kaldır</Text>
                   </View>
-                  
+
                   <View style={styles.modalContent}>
                      <Text style={styles.modalMessage}>
-                        <Text style={styles.bookTitleInModal}>"{selectedBook?.title}"</Text>
-                        {'\n'}adlı kitabı listenizden kaldırmak istediğinizden emin misiniz?
+                        <Text style={styles.bookTitleInModal}>
+                           "{selectedBook?.title}"
+                        </Text>
+                        {'\n'}adlı kitabı listenizden kaldırmak istediğinizden emin
+                        misiniz?
                      </Text>
                      <Text style={styles.modalSubMessage}>
-                        Bu işlem geri alınamaz ve kitap favoriler listenizden tamamen kaldırılacaktır.
+                        Bu işlem geri alınamaz ve kitap favoriler listenizden tamamen
+                        kaldırılacaktır.
                      </Text>
                   </View>
 
                   <View style={styles.modalButtons}>
-                     <TouchableOpacity
-                        style={styles.cancelButton}
-                        onPress={cancelRemove}
-                     >
+                     <TouchableOpacity style={styles.cancelButton} onPress={cancelRemove}>
                         <Text style={styles.cancelButtonText}>Vazgeç</Text>
                      </TouchableOpacity>
-                     
+
                      <TouchableOpacity
                         style={styles.confirmButton}
                         onPress={confirmRemove}
@@ -253,6 +273,24 @@ const FavoritesScreen = () => {
                </View>
             </View>
          </Modal>
+         <BookRecommendationModal
+            visible={recommendationModalVisible}
+            onClose={() => setRecommendationModalVisible(false)}
+         />
+         <TouchableOpacity
+            style={styles.fab}
+            onPress={() => setRecommendationModalVisible(true)}
+         >
+            <LottieView
+               source={{
+                  uri: 'https://assets9.lottiefiles.com/packages/lf20_1pxqjqps.json',
+               }}
+               autoPlay
+               loop
+               style={styles.fabAnimation}
+               resizeMode="contain"
+            />
+         </TouchableOpacity>
       </View>
    );
 };
@@ -470,6 +508,26 @@ const styles = StyleSheet.create({
       color: 'white',
       fontWeight: 'bold',
       marginLeft: 6,
+   },
+   fab: {
+      position: 'absolute',
+      right: 20,
+      bottom: 30,
+      width: 110,
+      height: 110,
+      borderRadius: 55,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4.65,
+      overflow: 'visible',
+   },
+   fabAnimation: {
+      width: 110,
+      height: 110,
    },
 });
 

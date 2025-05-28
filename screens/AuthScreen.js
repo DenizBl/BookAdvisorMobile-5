@@ -26,8 +26,10 @@ const AuthScreen = (props) => {
    };
    return (
       <SafeAreaView style={[styles.container, { flex: 1 }]}>
-         <ImageBackground 
-            source={{ uri: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80' }}
+         <ImageBackground
+            source={{
+               uri: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+            }}
             style={styles.backgroundImage}
             resizeMode="cover"
          >
@@ -43,40 +45,51 @@ const AuthScreen = (props) => {
                         {/* Lottie Animasyon */}
                         <View style={styles.animationContainer}>
                            <LottieView
-                              source={{ uri: 'https://assets9.lottiefiles.com/packages/lf20_1pxqjqps.json' }}
+                              source={{
+                                 uri: 'https://lottie.host/299c206f-733c-41d0-ae42-e93472443cec/YmqVDAOaF3.json',
+                              }}
                               autoPlay
                               loop
                               style={styles.bookAnimation}
                               resizeMode="contain"
                            />
                         </View>
-                        
+
                         {/* Logo Metni */}
                         <View style={styles.logoTextContainer}>
                            <Text style={styles.logoText}>BookAdvisor</Text>
-                           <Text style={styles.logoSubtext}>Kitap Dünyasına Hoş Geldiniz</Text>
+                           <Text style={styles.logoSubtext}>
+                              Kitap Dünyasına Hoş Geldiniz
+                           </Text>
                         </View>
                      </View>
-                     
+
                      {/* Form Container with Background */}
                      <View style={styles.formContainer}>
                         {/* Form Header Animation */}
                         <View style={styles.formHeaderContainer}>
-                                                       <LottieView
-                               source={{ uri: 'https://assets3.lottiefiles.com/packages/lf20_w51pcehl.json' }}
-                               autoPlay
-                               loop
-                               style={styles.readingAnimation}
-                               resizeMode="contain"
-                            />
+                           <LottieView
+                              source={{
+                                 uri: 'https://assets9.lottiefiles.com/packages/lf20_1pxqjqps.json',
+                              }}
+                              autoPlay
+                              loop
+                              style={styles.readingAnimation}
+                              resizeMode="contain"
+                           />
                            <Text style={styles.formHeaderText}>
-                              {isSignUp ? 'Hesabınıza Giriş Yapın' : 'Yeni Hesap Oluşturun'}
+                              {isSignUp
+                                 ? 'Hesabınıza Giriş Yapın'
+                                 : 'Yeni Hesap Oluşturun'}
                            </Text>
                         </View>
-                        
+
                         {isSignUp ? <SignInForm /> : <SignUpForm />}
-                        
-                        <TouchableOpacity onPress={toggleForm} style={styles.linkContainer}>
+
+                        <TouchableOpacity
+                           onPress={toggleForm}
+                           style={styles.linkContainer}
+                        >
                            <Text style={styles.link}>
                               {`Switch to ${isSignUp ? 'Sign Up' : 'Sign In'}`}{' '}
                            </Text>
@@ -122,7 +135,7 @@ const styles = StyleSheet.create({
       justifyContent: 'center',
       marginBottom: 30,
    },
-   
+
    // Lottie Animasyonları
    animationContainer: {
       alignItems: 'center',
@@ -132,7 +145,7 @@ const styles = StyleSheet.create({
       width: 150,
       height: 150,
    },
-   
+
    // Logo Metni
    logoTextContainer: {
       alignItems: 'center',
@@ -158,7 +171,7 @@ const styles = StyleSheet.create({
       textShadowOffset: { width: 1, height: 1 },
       textShadowRadius: 5,
    },
-   
+
    // Form Container
    formContainer: {
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -174,7 +187,7 @@ const styles = StyleSheet.create({
       shadowRadius: 20,
       elevation: 15,
    },
-   
+
    // Form Header
    formHeaderContainer: {
       alignItems: 'center',
@@ -191,7 +204,7 @@ const styles = StyleSheet.create({
       textAlign: 'center',
       marginTop: 10,
    },
-   
+
    linkContainer: {
       justifyContent: 'center',
       alignItems: 'center',
